@@ -1,5 +1,5 @@
 import numpy as np
-
+import traceback as tb
 from algorithm.mapper import mapper
 from algorithm.parameters import params
 

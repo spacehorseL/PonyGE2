@@ -18,6 +18,8 @@ params = {
         'HILL_CLIMBING_HISTORY': 1000,
         'SCHC_COUNT_METHOD': "count_all",
 
+        'CURRENT_GENERATION': 0,
+        'CURRENT_EVALUATION': 0, 
         # Set optional experiment name
         'EXPERIMENT_NAME': None,
         # Set default number of runs to be done.
@@ -183,7 +185,7 @@ params = {
         'AGENT_SIZE': 100,
         # Interaction Probablity. How frequently the agents can interaction with each other
         'INTERACTION_PROBABILITY': 0.5,
-        
+
         # OTHER
         # Set machine name (useful for doing multiple runs)
         'MACHINE': machine_name
@@ -230,7 +232,7 @@ def load_params(file_name):
 
             # Set parameter
             params[key] = value
-        
+
 
 def set_params(command_line_args, create_files=True):
     """
@@ -314,7 +316,7 @@ def set_params(command_line_args, create_files=True):
         # Set GENOME_OPERATIONS automatically for faster linear operations.
         if params['CROSSOVER'].representation == "linear" and \
                 params['MUTATION'].representation == "linear":
-            params['GENOME_OPERATIONS'] = True
+            params['GENOME_OPERATIONS'] = False
         else:
             params['GENOME_OPERATIONS'] = False
 
