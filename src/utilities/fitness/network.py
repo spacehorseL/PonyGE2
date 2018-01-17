@@ -41,7 +41,8 @@ class Network():
         self.data_size = data_size
 
         if params['CUDA_ENABLED']:
-            self.model.cuda()
+            self.model = nn.DataParallel(self.model).cuda()
+
 
     def mse_rnk(self, x, y):
         return x.sub(y).float().pow(2).sum() / len(x)**3
@@ -49,7 +50,7 @@ class Network():
     def load_xy(self, x, y):
         return torch.from_numpy(x).float().view(-1, self.data_size), torch.from_numpy(y).float()
 
-    def calc_loss(self, loss_fcn, output, y):
+    def calc_loss(self, output, y, loss_fcn, loss):
         o_sorted, o_idx = torch.sort(output.data)
         y_sorted, y_idx = torch.sort(y.data)
         mse_rnk = self.mse_rnk(o_idx, y_idx)
@@ -83,10 +84,10 @@ class Network():
             x, y = x.cuda(), y.cuda()
         x, y = Variable(x, volatile=True), Variable(y)
 
-        output = self.model(x).view(-1)
+        output = self.model(x) #.view(-1)
         loss_fcn = self.criterion(output, y)
 
-        return calc_loss(output, y, loss_fcn)
+        return self.calc_loss(output, y, loss_fcn, loss)
 
 class ClassificationNet(Network):
     def __init__(self, layers, data_size):
@@ -96,11 +97,12 @@ class ClassificationNet(Network):
     def load_xy(self, x, y):
         return torch.from_numpy(x).float().view(-1, self.data_size), torch.from_numpy(y).long()
 
-    def calc_loss(self, loss_fcn, output, y):
+    def calc_loss(self, output, y, loss_fcn, loss):
+        accuracy = 0
         mse = loss_fcn.data[0]
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
         accuracy += pred.eq(y.data.view_as(pred)).cpu().sum()
-
+        accuracy /= len(output.data)
         loss.setLoss('mse', mse)
         loss.setLoss('accuracy', accuracy)
         return accuracy
