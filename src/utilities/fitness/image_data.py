@@ -16,6 +16,14 @@ class ImageData:
 
 class ImageProcessor:
     @classmethod
+    def process_images(cls, imgs, ind):
+        processed = []
+        for img in imgs:
+            cls.image = img
+            processed.append(ind.tree.evaluate_tree())
+        return np.asarray(processed)
+
+    @classmethod
     def process(cls, operator, arguments):
         return cls.__getattribute__(cls, operator)(cls, arguments)
 

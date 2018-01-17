@@ -13,11 +13,11 @@ MAX_INIT_TREE_DEPTH:    24
 MAX_TREE_DEPTH:         24
 MUTATION:               int_flip_per_codon
 POPULATION_SIZE:        50
-FITNESS_FUNCTION:       image_proc
+FITNESS_FUNCTION:       cifar10
 REPLACEMENT:            generational
 SELECTION:              tournament
 TOURNAMENT_SIZE:        10
 VERBOSE:                True
 CUDA_ENABLED:           False
-NUM_EPOCHS:             50
-DATASET:                /Users/mac/workspace/fyp/gp/ecj/custom/fyp/data/pmn_instagram
+NUM_EPOCHS:             20
+DATASET:                /Users/mac/workspace/fyp/gp/ecj/custom/fyp/data/cifar-10-batches-py/
