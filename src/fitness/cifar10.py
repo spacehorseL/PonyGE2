@@ -85,7 +85,7 @@ class cifar10(base_ff):
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
-            data_train = DataIterator(X_train, y_train, 64)
+            data_train = DataIterator(X_train, y_train, 20)
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
                 batch = 0
                 for x, y in data_train:

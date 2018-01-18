@@ -40,6 +40,7 @@ def search_loop():
         # New generation
         individuals = params['STEP'](individuals)
 
+    Logger.close_all()
     if params['MULTICORE']:
         # Close the workers pool (otherwise they'll live on forever).
         params['POOL'].close()

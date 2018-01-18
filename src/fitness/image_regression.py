@@ -44,6 +44,7 @@ class image_regression(base_ff):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
         Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
+        Logger.fcreate("rnk", "log.rank")
 
     def process_image(self, imgs, ind):
         processed = []
@@ -81,6 +82,8 @@ class image_regression(base_ff):
                 net.train(epoch, X_train, y_train, train_loss)
                 if epoch % 5 == 0:
                     Logger.log("Epoch {}\tTraining loss (MSE): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                    Logger.fwrite("rnk", "flush")
+                    Logger.flush_all()
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('mse_rnk')
             Logger.log("Cross Validation [Fold {}/{}] (MSE/MSE_RNK): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('mse_rnk')))
