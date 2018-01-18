@@ -43,21 +43,25 @@ class Network():
         if params['CUDA_ENABLED']:
             self.model = nn.DataParallel(self.model).cuda()
 
-
-    def mse_rnk(self, x, y):
-        return x.sub(y).float().pow(2).sum() / len(x)**3
+    def mse_rnk(self, x, y=None):
+        if y is not None:
+            x = x.sub(y)
+        return x.float().pow(2).sum() / len(x)**3
 
     def load_xy(self, x, y):
         return torch.from_numpy(x).float().view(-1, self.data_size), torch.from_numpy(y).float()
 
-    def calc_loss(self, output, y, loss_fcn, loss):
-        o_sorted, o_idx = torch.sort(output.data)
+    def calc_loss(self, output, y, loss_fcn, stats):
+        o_sorted, o_idx = torch.sort(output.data.view(-1))
         y_sorted, y_idx = torch.sort(y.data)
-        mse_rnk = self.mse_rnk(o_idx, y_idx)
+        o_idx = o_idx.view_as(y_idx)
+        diff = o_idx.sub(y_idx).abs()
+        mse_rnk = self.mse_rnk(diff)
         mse = loss_fcn.data[0]
 
-        loss.setLoss('mse', mse)
-        loss.setLoss('mse_rnk', mse_rnk)
+        stats.setLoss('mse', mse)
+        stats.setLoss('mse_rnk', mse_rnk)
+        stats.setList('rankHist', diff.tolist())
         return mse_rnk
 
     def train(self, epoch, x, y, loss):
@@ -74,7 +78,6 @@ class Network():
         self.optimizer.zero_grad()
         loss_fcn.backward()
         self.optimizer.step()
-
         loss.setLoss('mse', loss_fcn.data[0])
 
     def test(self, x, y, loss):

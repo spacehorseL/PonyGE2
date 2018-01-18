@@ -94,16 +94,15 @@ class ImageProcessor:
 
     def meanShiftFilter(self, args):
         src = args[0].getData()
-        # print(type(src))
-        # src = np.uint8(src)
-        return args[0].setData(cv.pyrMeanShiftFiltering(src, args[1], args[2]))
+        return args[0].setData(cv.pyrMeanShiftFiltering(np.uint8(src), args[1], args[2]))
 
     def gammaCorrection(self, args):
         src = args[0].getData()
         lut = np.zeros(256)
         for i in range(0, len(lut)):
             lut[i] = np.power(i / 255.0, args[1]) * 255.0
-        return args[0].setData(np.uint8(cv.LUT(src, lut)))
+        lut3 = cv.merge((lut,lut,lut))
+        return args[0].setData(np.uint8(cv.LUT(src, lut3)))
 
     def imgx(self, args):
         return ImageData(self.image)

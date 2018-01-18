@@ -31,6 +31,10 @@ def search_loop():
     # Generate statistics for run so far
     get_stats(individuals)
 
+    # Cleanup after evaluation
+    if 'cleanup' in dir(params['FITNESS_FUNCTION']):
+        params['FITNESS_FUNCTION'].cleanup(individuals)
+
     # Traditional GE
     for generation in range(1, (params['GENERATIONS']+1)):
         stats['gen'] = generation
@@ -39,6 +43,9 @@ def search_loop():
         Logger.log("Generation {0} starts...".format(generation))
         # New generation
         individuals = params['STEP'](individuals)
+        # Cleanup after evaluation
+        if 'cleanup' in dir(params['FITNESS_FUNCTION']):
+            params['FITNESS_FUNCTION'].cleanup(individuals)
 
     Logger.close_all()
     if params['MULTICORE']:

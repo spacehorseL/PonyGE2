@@ -1,21 +1,13 @@
 from algorithm.parameters import params
 from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
+from utilities.stats.individual_stat import stats
 from utilities.fitness.image_data import ImageData, ImageProcessor
 from utilities.fitness.network import Network
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
 import os, csv, random
-
-class Loss():
-    def __init__(self, name):
-        self.loss = {}
-        self.default_name = name
-    def setLoss(self, name, loss):
-        self.loss[name] = loss
-    def getLoss(self, name='mse'):
-        return self.loss[name]
 
 class image_regression(base_ff):
     maximise = False  # True as it ever was.
@@ -44,7 +36,7 @@ class image_regression(base_ff):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
         Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
-        Logger.fcreate("rnk", "log.rank")
+        Logger.fcreate("rankHist", "log.rank")
 
     def process_image(self, imgs, ind):
         processed = []
@@ -69,8 +61,8 @@ class image_regression(base_ff):
 
         init_size = ImageProcessor.image.shape[0]*ImageProcessor.image.shape[1]*ImageProcessor.image.shape[2]
 
-        train_loss = Loss('mse')
-        test_loss = Loss('mse_rnk')
+        train_loss = stats('mse')
+        test_loss = stats('mse_rnk')
         kf = KFold(n_splits=3)
         net = Network([init_size, 9600, 1200, 1], init_size)
         fitness, fold = 0, 1
@@ -82,15 +74,23 @@ class image_regression(base_ff):
                 net.train(epoch, X_train, y_train, train_loss)
                 if epoch % 5 == 0:
                     Logger.log("Epoch {}\tTraining loss (MSE): {:.6f}".format(epoch, train_loss.getLoss('mse')))
-                    Logger.fwrite("rnk", "flush")
-                    Logger.flush_all()
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('mse_rnk')
             Logger.log("Cross Validation [Fold {}/{}] (MSE/MSE_RNK): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('mse_rnk')))
             fold = fold + 1
         fitness /= kf.get_n_splits()
+        ind.stats = test_loss
 
         net.test(processed_test, self.y_test, test_loss)
         Logger.log("Generalization Loss (MSE/MSE_RNK): {:.6f} {:.6f}".format(test_loss.getLoss('mse'), test_loss.getLoss('mse_rnk')))
         params['CURRENT_EVALUATION'] += 1
         return fitness
+
+    def cleanup(self, inds):
+        best_ind, best_fitness = None, float("inf")
+        for ind in inds:
+            if best_fitness > ind.fitness:
+                best_fitness = ind.fitness
+                best_ind = ind
+        best_rnk = ",".join([str(i) for i in ind.stats.getList("rankHist")])
+        Logger.fwrite("rankHist", "{},{},{}".format(params['CURRENT_GENERATION'], best_fitness, best_rnk))

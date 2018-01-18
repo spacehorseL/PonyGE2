@@ -1,6 +1,5 @@
 from time import localtime, strftime
 from algorithm.parameters import params
-import threading
 import multiprocessing
 
 class Logger():

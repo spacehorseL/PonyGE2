@@ -1,6 +1,7 @@
 from algorithm.parameters import params
 from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
+from utilities.stats.individual_stat import stats
 from utilities.fitness.image_data import ImageData, ImageProcessor
 from utilities.fitness.network import ClassificationNet
 from sklearn.model_selection import train_test_split, KFold
@@ -8,14 +9,6 @@ import cv2 as cv
 import numpy as np
 import os, csv, random, pickle
 
-class Loss():
-    def __init__(self, name):
-        self.loss = {}
-        self.default_name = name
-    def setLoss(self, name, loss):
-        self.loss[name] = loss
-    def getLoss(self, name='mse'):
-        return self.loss[name]
 class DataIterator():
     def __init__(self, X, Y, batch_size=64):
         self.num_splits = len(X) // batch_size
@@ -76,8 +69,8 @@ class cifar10(base_ff):
 
         init_size = ImageProcessor.image.shape[0]*ImageProcessor.image.shape[1]*ImageProcessor.image.shape[2]
 
-        train_loss = Loss('mse')
-        test_loss = Loss('accuracy')
+        train_loss = stats('mse')
+        test_loss = stats('accuracy')
         kf = KFold(n_splits=10)
         net = ClassificationNet([init_size, 3072, 3072, 10], init_size)
         fitness, fold = 0, 1
