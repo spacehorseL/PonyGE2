@@ -19,5 +19,7 @@ SELECTION:              tournament
 TOURNAMENT_SIZE:        10
 VERBOSE:                True
 CUDA_ENABLED:           False
+CROSS_VALIDATION_SPLIT: 3
 NUM_EPOCHS:             50
-DATASET:                /Users/mac/workspace/fyp/gp/ecj/custom/fyp/data/pmn_instagram
+PARENT_FILE:            local_params.txt
+DATASET:                2

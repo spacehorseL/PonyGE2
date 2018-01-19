@@ -5,3 +5,5 @@ results/
 Banknote.csv
 Banknote_shuf.csv
 .idea/
+log*
+local_params.txt

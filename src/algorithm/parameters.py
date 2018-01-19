@@ -19,7 +19,7 @@ params = {
         'SCHC_COUNT_METHOD': "count_all",
 
         'CURRENT_GENERATION': 0,
-        'CURRENT_EVALUATION': 0, 
+        'CURRENT_EVALUATION': 0,
         # Set optional experiment name
         'EXPERIMENT_NAME': None,
         # Set default number of runs to be done.
@@ -202,16 +202,22 @@ def load_params(file_name):
 
     try:
         open(file_name, "r")
-    except FileNotFoundError:
-        s = "algorithm.paremeters.load_params\n" \
-            "Error: Parameters file not found.\n" \
-            "       Ensure file extension is specified, e.g. 'regression.txt'."
-        raise Exception(s)
+    except:
+        try:
+            base = path.dirname(path.dirname(path.dirname(__file__)))
+            file_name = path.join(base, "parameters", file_name)
+            open(file_name, "r")
+        except FileNotFoundError:
+            s = "algorithm.paremeters.load_params\n" \
+                "Error: Parameters file not found.\n" \
+                "       Ensure file extension is specified, e.g. 'regression.txt'."
+            raise Exception(s)
 
+    print("\nLoad Parameters: {}".format(path.abspath(file_name)))
     with open(file_name, 'r') as parameters:
         # Read the whole parameters file.
+        parents = []
         content = parameters.readlines()
-
         for line in [l for l in content if not l.startswith("#")]:
 
             # Parameters files are parsed by finding the first instance of a
@@ -231,8 +237,13 @@ def load_params(file_name):
                 pass
 
             # Set parameter
-            params[key] = value
+            if key == "PARENT_FILE":
+                parents.append(value)
+            else:
+                params[key] = value
 
+        for parent_file_name in parents:
+            load_params(parent_file_name)
 
 def set_params(command_line_args, create_files=True):
     """
@@ -271,6 +282,9 @@ def set_params(command_line_args, create_files=True):
     # Join original params dictionary with command line specified arguments.
     # NOTE that command line arguments overwrite all previously set parameters.
     params.update(cmd_args)
+
+    if isinstance(params['DATASET'], int) or not path.isfile(params['DATASET']):
+        params['DATASET'] = params['DATASET_'+str(params['DATASET'])]
 
     if params['LOAD_STATE']:
         # Load run from state.

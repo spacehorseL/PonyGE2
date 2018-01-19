@@ -1,7 +1,7 @@
 <start> ::= merge<op><op><op>
 <op> ::= channel<m_op><ERC3>
        | contrast<op>
-       | noise<op><ERC0>
+       | noise2D<op><ERC0>
        | canny<op><ERC1><ERC2>
        | filter<op><ERC0><ERC2>
        | threshold<op><ERC1><ERC3>

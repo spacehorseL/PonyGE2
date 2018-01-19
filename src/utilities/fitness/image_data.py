@@ -40,7 +40,7 @@ class ImageProcessor:
         return random.random()
 
     def merge(self, args):
-        src = [arg.getData() for arg in args]
+        src = [np.uint8(arg.getData()) for arg in args]
         dest = cv.merge(tuple(src))
         # cv.imshow('dest', dest)
         # cv.waitKey(0)
@@ -60,32 +60,33 @@ class ImageProcessor:
         return args[0].setData(dest)
 
     def canny(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         return args[0].setData(cv.Canny(src, args[1], args[2]))
 
     def contrast(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         return args[0].setData(cv.equalizeHist(src))
 
     def filter(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         kernel = int(args[1]) // 2 if args[1] > 3 else 1
         std = kernel * args[2]
         kernel = kernel * 2 + 1
         return args[0].setData(cv.GaussianBlur(src, (kernel, kernel), std))
 
-    def noise(self, args):
-        src = args[0].getData()
-        return args[0].setData(cv.equalizeHist(src))
+    def noise2D(self, args):
+        src = np.uint8(args[0].getData())
+        sigma = args[1]
+        return args[0].setData(np.clip(src + np.random.normal(0, sigma, src.shape), 0, 255))
 
     def threshold(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         thres_type = int(args[2] * 5)
         _, t = cv.threshold(src, args[1], 255, thres_type)
         return args[0].setData(t)
 
     def adaptiveThreshold(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         thres_type = cv.THRESH_BINARY if args[1] > .5 else cv.THRESH_BINARY_INV
         block_size = int(args[2]) // 2 if args[2] > 3 else 1
         block_size = block_size * 2 + 1
@@ -93,16 +94,16 @@ class ImageProcessor:
         return args[0].setData(cv.adaptiveThreshold(src, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, thres_type, block_size, C))
 
     def meanShiftFilter(self, args):
-        src = args[0].getData()
-        return args[0].setData(cv.pyrMeanShiftFiltering(np.uint8(src), args[1], args[2]))
+        src = np.uint8(args[0].getData())
+        return args[0].setData(cv.pyrMeanShiftFiltering(src, args[1], args[2]))
 
     def gammaCorrection(self, args):
-        src = args[0].getData()
+        src = np.uint8(args[0].getData())
         lut = np.zeros(256)
         for i in range(0, len(lut)):
             lut[i] = np.power(i / 255.0, args[1]) * 255.0
         lut3 = cv.merge((lut,lut,lut))
-        return args[0].setData(np.uint8(cv.LUT(src, lut3)))
+        return args[0].setData(cv.LUT(src, lut3))
 
     def imgx(self, args):
         return ImageData(self.image)

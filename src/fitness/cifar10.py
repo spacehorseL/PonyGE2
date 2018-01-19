@@ -71,7 +71,7 @@ class cifar10(base_ff):
 
         train_loss = stats('mse')
         test_loss = stats('accuracy')
-        kf = KFold(n_splits=10)
+        kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         net = ClassificationNet([init_size, 3072, 3072, 10], init_size)
         fitness, fold = 0, 1
 
@@ -86,7 +86,7 @@ class cifar10(base_ff):
                     batch+=1
                     # if batch % 10 == 0:
                     #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
-                if epoch % 3 == 0:
+                if epoch % 5 == 0:
                     Logger.log("Epoch {}\tTraining loss (MSE): {:.6f}".format(epoch, train_loss.getLoss('mse')))
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')

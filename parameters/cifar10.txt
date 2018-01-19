@@ -19,5 +19,7 @@ SELECTION:              tournament
 TOURNAMENT_SIZE:        10
 VERBOSE:                True
 CUDA_ENABLED:           False
-NUM_EPOCHS:             2
-DATASET:                /Users/mac/workspace/fyp/gp/ecj/custom/fyp/data/cifar-10-batches-py/
+CROSS_VALIDATION_SPLIT: 10
+NUM_EPOCHS:             20
+PARENT_FILE:            local_params.txt
+DATASET:                5

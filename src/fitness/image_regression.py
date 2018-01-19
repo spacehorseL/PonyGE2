@@ -63,7 +63,7 @@ class image_regression(base_ff):
 
         train_loss = stats('mse')
         test_loss = stats('mse_rnk')
-        kf = KFold(n_splits=3)
+        kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         net = Network([init_size, 9600, 1200, 1], init_size)
         fitness, fold = 0, 1
 
