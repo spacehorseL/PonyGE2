@@ -20,6 +20,8 @@ TOURNAMENT_SIZE:        10
 VERBOSE:                True
 CUDA_ENABLED:           False
 CROSS_VALIDATION_SPLIT: 10
-NUM_EPOCHS:             20
+NUM_EPOCHS:             40000 
+BATCH_SIZE:             500
 PARENT_FILE:            local_params.txt
 DATASET:                5
+CONVOLUTION:            True

@@ -1,5 +1,6 @@
 from algorithm.parameters import params
 from utilities.stats.logger import Logger
+from utilities.stats.network_visualizer import Visualizer
 import collections
 import numpy as np
 import torch
@@ -39,7 +40,11 @@ class Network():
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.7)
         self.batch_size = batch_size
         self.data_size = data_size
-
+        
+        Logger.log("Network initialized with layers: ")
+        for l in [n for n in self.model.named_modules()][1:]:
+            Logger.log("\t{}".format(l))
+        
         if params['CUDA_ENABLED']:
             self.model = nn.DataParallel(self.model).cuda()
 
@@ -89,8 +94,13 @@ class Network():
 
         output = self.model(x) #.view(-1)
         loss_fcn = self.criterion(output, y)
-
+        
         return self.calc_loss(output, y, loss_fcn, loss)
+    
+    def visualize(self, layers, image_size, canvas_size):
+        Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
+        for name, fname in layers:
+            Visualizer.from_torch(self.model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
 
 class ClassificationNet(Network):
     def __init__(self, layers, data_size):

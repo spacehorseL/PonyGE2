@@ -67,7 +67,8 @@ class cifar10(base_ff):
         processed_train = ImageProcessor.process_images(self.X_train, ind)
         processed_test = ImageProcessor.process_images(self.X_test, ind)
 
-        init_size = ImageProcessor.image.shape[0]*ImageProcessor.image.shape[1]*ImageProcessor.image.shape[2]
+        image = ImageProcessor.image
+        init_size = image.shape[0]*image.shape[1]*image.shape[2]
 
         train_loss = stats('mse')
         test_loss = stats('accuracy')
@@ -78,7 +79,7 @@ class cifar10(base_ff):
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
-            data_train = DataIterator(X_train, y_train, 20)
+            data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
                 batch = 0
                 for x, y in data_train:
@@ -95,6 +96,7 @@ class cifar10(base_ff):
         fitness /= kf.get_n_splits()
 
         net.test(processed_test, self.y_test, test_loss)
+        ind.net = net
         Logger.log("Generalization Loss (MSE/Accuracy): {:.6f} {:.6f}".format(test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
         params['CURRENT_EVALUATION'] += 1
         return fitness

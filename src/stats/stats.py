@@ -371,6 +371,7 @@ def print_final_stats():
     else:
         print("\n\nBest:\n  Fitness:\t", trackers.best_ever.fitness)
 
+    print("  Tree:", trackers.best_ever.tree)
     print("  Phenotype:", trackers.best_ever.phenotype)
     print("  Genome:", trackers.best_ever.genome)
     print_generation_stats()

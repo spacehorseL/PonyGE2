@@ -33,6 +33,7 @@ class Individual(object):
 
         self.fitness = params['FITNESS_FUNCTION'].default_fitness
         self.runtime_error = False
+        self.net = None
         self.stats = None
         self.name = None
 

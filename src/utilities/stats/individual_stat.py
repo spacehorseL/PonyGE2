@@ -14,7 +14,7 @@ class stats():
     def setLoss(self, name, loss):
         self.loss[name] = loss
 
-    def getList(self, name, l):
+    def getList(self, name):
         return self.lists[name]
 
     def getLoss(self, name='mse'):
