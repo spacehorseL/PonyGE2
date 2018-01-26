@@ -7,7 +7,7 @@ class Visualizer():
         
     @classmethod
     def from_torch(cls, layer):
-        return cls(layer.weight.data.numpy())
+        return cls(layer.weight.data.cpu().numpy())
     
     def normalize(self, array):
         array = ((array - array.mean()) / array.std() + 0.5)

@@ -40,9 +40,6 @@ class cifar10(base_ff):
         X = np.reshape(X, (-1, 32,32,3))
         Logger.log("Done reading dataset with {0} images...".format(len(X)), info=False)
 
-        # Normalize label
-        # mean, std = np.mean(Y), np.std(Y)
-        # Y = np.divide(np.subtract(Y, mean), std)
         # Train & test split
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
@@ -73,7 +70,7 @@ class cifar10(base_ff):
         train_loss = stats('mse')
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = ClassificationNet([init_size, 3072, 3072, 10], init_size)
+        net = ClassificationNet([16384, 256, 10], init_size)
         fitness, fold = 0, 1
 
         for train_index, val_index in kf.split(processed_train):

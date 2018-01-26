@@ -10,23 +10,20 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 class Model(nn.Module):
-    def __init__(self, layers):
+    def __init__(self, layers, data_size):
         super(Model, self).__init__()
-        fcn = collections.OrderedDict()
-        for l in range(1, len(layers)):
-            linear = nn.Linear(layers[l-1], layers[l])
-            nn.init.xavier_uniform(linear.weight, gain=np.sqrt(2))
-            fcn["fcn"+str(l)] = linear
-        self.parameters = nn.Sequential(fcn)
+        self.data_size = data_size
+        self.conv_layers = self.set_conv()
+        self.fcn_layers = self.set_fcn(layers)
 
-    def forward(self, x):
-        # x = x.view(-1, 19200)
-        for l in self.parameters:
-            x = nn.Tanh(l(x))
-        return x
+        if params['CUDA_ENABLED']:
+            self.conv_layers = nn.DataParallel(self.conv_layers).cuda()
+            self.fcn_layers = nn.DataParallel(self.fcn_layers).cuda()
 
-class Network():
-    def __init__(self, layers, data_size, batch_size=32):
+    def set_conv(self):
+        return
+
+    def set_fcn(self, layers):
         fcn = collections.OrderedDict()
         for l in range(1, len(layers)):
             linear = nn.Linear(layers[l-1], layers[l])
@@ -35,26 +32,53 @@ class Network():
             if l != len(layers) - 1:
                 fcn["dp"+str(l)] = nn.Dropout(p=0.7)
                 fcn["tanh"+str(l)] = nn.Tanh()
-        self.model = nn.Sequential(fcn)
+        return nn.Sequential(fcn)
+
+    def get_module(self):
+        return self.model.modules()
+
+class FCNModel(Model):
+    def __init__(self, layers, data_size):
+        super(FCNModel, self).__init__(layers, data_size)
+
+    def forward(self, x):
+        x = x.view(-1, self.data_size)
+        x = self.fcn_layers(x)
+        return x
+
+class Conv1Model(Model):
+    def __init__(self, layers, data_size):
+        super(Conv1Model, self).__init__(layers, data_size)
+
+    def set_conv(self):
+        fcn = collections.OrderedDict()
+        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        fcn['relu1'] = nn.ReLU(inplace=True)
+        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        return nn.Sequential(fcn)
+
+    def forward(self, x):
+        x = x.view(x.size(0), x.size(3), x.size(1), x.size(2))
+        x = self.conv_layers(x)
+        x = x.view(x.size(0), -1)
+        x = self.fcn_layers(x)
+        return x
+
+class Network():
+    def __init__(self, layers, data_size, batch_size=32):
+        self.model = FCNModel(layers, data_size)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.7)
         self.batch_size = batch_size
         self.data_size = data_size
         
-        Logger.log("Network initialized with layers: ")
-        for l in [n for n in self.model.named_modules()][1:]:
-            Logger.log("\t{}".format(l))
-        
-        if params['CUDA_ENABLED']:
-            self.model = nn.DataParallel(self.model).cuda()
-
     def mse_rnk(self, x, y=None):
         if y is not None:
             x = x.sub(y)
         return x.float().pow(2).sum() / len(x)**3
 
     def load_xy(self, x, y):
-        return torch.from_numpy(x).float().view(-1, self.data_size), torch.from_numpy(y).float()
+        return torch.from_numpy(x).float(), torch.from_numpy(y).float()
 
     def calc_loss(self, output, y, loss_fcn, stats):
         o_sorted, o_idx = torch.sort(output.data.view(-1))
@@ -92,23 +116,25 @@ class Network():
             x, y = x.cuda(), y.cuda()
         x, y = Variable(x, volatile=True), Variable(y)
 
-        output = self.model(x) #.view(-1)
+        output = self.model(x)
         loss_fcn = self.criterion(output, y)
         
         return self.calc_loss(output, y, loss_fcn, loss)
     
     def visualize(self, layers, image_size, canvas_size):
         Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
+        model = [m for m in self.model.modules()][1] if params['CUDA_ENABLED'] else self.model
         for name, fname in layers:
-            Visualizer.from_torch(self.model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
+            Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
 
 class ClassificationNet(Network):
     def __init__(self, layers, data_size):
         super(ClassificationNet, self).__init__(layers, data_size)
         self.criterion = F.nll_loss
+        self.model = Conv1Model(layers, data_size)
 
     def load_xy(self, x, y):
-        return torch.from_numpy(x).float().view(-1, self.data_size), torch.from_numpy(y).long()
+        return torch.from_numpy(x).float(), torch.from_numpy(y).long()
 
     def calc_loss(self, output, y, loss_fcn, loss):
         accuracy = 0
