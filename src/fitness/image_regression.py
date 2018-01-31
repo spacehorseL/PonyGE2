@@ -38,13 +38,6 @@ class image_regression(base_ff):
         Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
         Logger.fcreate("rankHist", "log.rank")
 
-    def process_image(self, imgs, ind):
-        processed = []
-        for img in imgs:
-            ImageProcessor.image = img
-            processed.append(ind.tree.evaluate_tree())
-        return np.asarray(processed)
-
     def evaluate(self, ind, **kwargs):
         # ind.phenotype will be a string, including function definitions etc.
         # When we exec it, it will create a value XXX_output_XXX, but we exec

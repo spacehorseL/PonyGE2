@@ -10,15 +10,16 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 class Model(nn.Module):
-    def __init__(self, layers, data_size):
+    def __init__(self, layers):
         super(Model, self).__init__()
-        self.data_size = data_size
         self.conv_layers = self.set_conv()
         self.fcn_layers = self.set_fcn(layers)
 
         if params['CUDA_ENABLED']:
-            self.conv_layers = nn.DataParallel(self.conv_layers).cuda()
-            self.fcn_layers = nn.DataParallel(self.fcn_layers).cuda()
+            if self.conv_layers:
+                self.conv_layers = nn.DataParallel(self.conv_layers).cuda()
+            if self.fcn_layers:
+                self.fcn_layers = nn.DataParallel(self.fcn_layers).cuda()
 
     def set_conv(self):
         return
@@ -31,28 +32,28 @@ class Model(nn.Module):
             fcn["fcn"+str(l)] = linear
             if l != len(layers) - 1:
                 fcn["dp"+str(l)] = nn.Dropout(p=0.7)
-                fcn["tanh"+str(l)] = nn.Tanh()
+                fcn["reluf"+str(l)] = nn.ReLU(inplace=True)
         return nn.Sequential(fcn)
 
     def get_module(self):
         return self.model.modules()
 
 class FCNModel(Model):
-    def __init__(self, layers, data_size):
-        super(FCNModel, self).__init__(layers, data_size)
+    def __init__(self, layers):
+        super(FCNModel, self).__init__(layers)
 
     def forward(self, x):
-        x = x.view(-1, self.data_size)
+        x = x.view(-1, self.layers[0])
         x = self.fcn_layers(x)
         return x
 
 class Conv1Model(Model):
-    def __init__(self, layers, data_size):
-        super(Conv1Model, self).__init__(layers, data_size)
+    def __init__(self, layers):
+        super(Conv1Model, self).__init__(layers)
 
     def set_conv(self):
         fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        fcn['conv1'] = nn.Conv2d(3, 32, kernel_size=3, padding=1)
         fcn['relu1'] = nn.ReLU(inplace=True)
         fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
@@ -64,13 +65,47 @@ class Conv1Model(Model):
         x = self.fcn_layers(x)
         return x
 
+class Conv2Model(Conv1Model):
+    def __init__(self, layers):
+        super(Conv2Model, self).__init__(layers)
+
+    def set_conv(self):
+        fcn = collections.OrderedDict()
+        fcn['conv1'] = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        fcn['relu1'] = nn.ReLU(inplace=True)
+        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        fcn['conv2'] = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        fcn['relu2'] = nn.ReLU(inplace=True)
+        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        return nn.Sequential(fcn)
+
+class AlexNetModel(Conv1Model):
+    def __init__(self, layers):
+        super(AlexNetModel, self).__init__([256, 10])
+
+    def set_conv(self):
+        fcn = collections.OrderedDict()
+        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=5)
+        fcn['relu1'] = nn.ReLU(inplace=True)
+        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        fcn['conv2'] = nn.Conv2d(64, 192, kernel_size=5, padding=2)
+        fcn['relu2'] = nn.ReLU(inplace=True)
+        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        fcn['conv3'] = nn.Conv2d(192, 384, kernel_size=3, padding=1)
+        fcn['relu3'] = nn.ReLU(inplace=True)
+        fcn['conv4'] = nn.Conv2d(384, 256, kernel_size=3, padding=1)
+        fcn['relu4'] = nn.ReLU(inplace=True)
+        fcn['conv5'] = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        fcn['relu5'] = nn.ReLU(inplace=True)
+        fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        return nn.Sequential(fcn)
+
 class Network():
-    def __init__(self, layers, data_size, batch_size=32):
-        self.model = FCNModel(layers, data_size)
+    def __init__(self, layers, batch_size=32):
+        self.model = FCNModel(layers)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.7)
         self.batch_size = batch_size
-        self.data_size = data_size
         
     def mse_rnk(self, x, y=None):
         if y is not None:
@@ -128,10 +163,10 @@ class Network():
             Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
 
 class ClassificationNet(Network):
-    def __init__(self, layers, data_size):
-        super(ClassificationNet, self).__init__(layers, data_size)
+    def __init__(self, layers):
+        super(ClassificationNet, self).__init__(layers)
+        self.model = AlexNetModel(layers)
         self.criterion = F.nll_loss
-        self.model = Conv1Model(layers, data_size)
 
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).long()

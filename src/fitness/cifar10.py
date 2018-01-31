@@ -21,11 +21,14 @@ class DataIterator():
         X, Y = self.X[self.cursor], self.X[self.cursor]
         self.cursor = (self.cursor + step) % self.num_splits
         return X, Y
+
 class cifar10(base_ff):
     maximise = True  # True as it ever was.
     def __init__(self):
         # Initialise base fitness function class.
         super().__init__()
+        self.layers = [16384, 256, 10]
+        self.resize = params['RESIZE']
 
         # Read images from dataset
         Logger.log("Reading images from {0} ...".format(params['DATASET']), info=False)
@@ -44,6 +47,9 @@ class cifar10(base_ff):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
         Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
+        Logger.log("Using grammar = {}".format(params['GRAMMAR_FILE'], info=False))
+        Logger.log("Resizing after processing = {}".format(self.resize, info=False))
+        Logger.log("Network structure = \n{}".format(ClassificationNet(self.layers).model, info=False))
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:
@@ -61,8 +67,8 @@ class cifar10(base_ff):
         Logger.log("Depth: {0}\tGenome: {1}".format(max_depth, genome))
 
         # Exec the phenotype.
-        processed_train = ImageProcessor.process_images(self.X_train, ind)
-        processed_test = ImageProcessor.process_images(self.X_test, ind)
+        processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
+        processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
 
         image = ImageProcessor.image
         init_size = image.shape[0]*image.shape[1]*image.shape[2]
@@ -70,9 +76,10 @@ class cifar10(base_ff):
         train_loss = stats('mse')
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = ClassificationNet([16384, 256, 10], init_size)
+        net = ClassificationNet(self.layers)
         fitness, fold = 0, 1
 
+        Logger.log("Training Start: ")
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
@@ -81,11 +88,11 @@ class cifar10(base_ff):
                 batch = 0
                 for x, y in data_train:
                     net.train(epoch, x, y, train_loss)
-                    batch+=1
+                    batch += 1
                     # if batch % 10 == 0:
                     #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
-                if epoch % 5 == 0:
-                    Logger.log("Epoch {}\tTraining loss (MSE): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                if epoch % 1 == 0:
+                    Logger.log("Epoch {}\tTraining loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')
             Logger.log("Cross Validation [Fold {}/{}] (MSE/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))

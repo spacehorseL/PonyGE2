@@ -2,6 +2,7 @@ import random
 import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
+from utilities.stats.logger import Logger
 
 class ImageData:
     def __init__(self, data):
@@ -16,11 +17,15 @@ class ImageData:
 
 class ImageProcessor:
     @classmethod
-    def process_images(cls, imgs, ind):
+    def process_images(cls, imgs, ind, resize=None):
+        Logger.log("Processing {} images...".format(len(imgs)))
         processed = []
         for img in imgs:
             cls.image = img
-            processed.append(ind.tree.evaluate_tree())
+            result = ind.tree.evaluate_tree()
+            if resize and result.shape is not resize:
+                result = cv.pyrDown(result, dstsize=resize)
+            processed.append(result)
         return np.asarray(processed)
 
     @classmethod
@@ -42,9 +47,6 @@ class ImageProcessor:
     def merge(self, args):
         src = [np.uint8(arg.getData()) for arg in args]
         dest = cv.merge(tuple(src))
-        # cv.imshow('dest', dest)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
         return dest
 
     def channel(self, args):
