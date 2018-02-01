@@ -18,7 +18,6 @@ class ImageData:
 class ImageProcessor:
     @classmethod
     def process_images(cls, imgs, ind, resize=None):
-        Logger.log("Processing {} images...".format(len(imgs)))
         processed = []
         for img in imgs:
             cls.image = img

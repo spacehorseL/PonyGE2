@@ -67,6 +67,7 @@ class cifar10(base_ff):
         Logger.log("Depth: {0}\tGenome: {1}".format(max_depth, genome))
 
         # Exec the phenotype.
+        Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
         processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
         processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
 
@@ -75,15 +76,16 @@ class cifar10(base_ff):
 
         train_loss = stats('mse')
         test_loss = stats('accuracy')
-        kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
+        kf, freq = KFold(n_splits=params['CROSS_VALIDATION_SPLIT']), params["EPOCH_FREQ"]
         net = ClassificationNet(self.layers)
-        fitness, fold = 0, 1
+        fitness, early_stop, fold = 0, 0, 1
 
         Logger.log("Training Start: ")
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
+            prev, early_stop = 0, 0
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
                 batch = 0
                 for x, y in data_train:
@@ -91,8 +93,15 @@ class cifar10(base_ff):
                     batch += 1
                     # if batch % 10 == 0:
                     #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
-                if epoch % 1 == 0:
+                if epoch % freq == 0:
                     Logger.log("Epoch {}\tTraining loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                if abs(prev - train_loss.getLoss('mse')) < 1e-6:
+                    early_stop += 1
+                    if early_stop > 10:
+                        Logger.log("Early stopping at epoch {}".format(epoch))
+                        break
+                else:
+                    early_stop = 0
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')
             Logger.log("Cross Validation [Fold {}/{}] (MSE/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
