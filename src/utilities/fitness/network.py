@@ -12,6 +12,7 @@ from torch.autograd import Variable
 class Model(nn.Module):
     def __init__(self, layers):
         super(Model, self).__init__()
+        self.layers = layers
         self.conv_layers = self.set_conv()
         self.fcn_layers = self.set_fcn(layers)
 
@@ -101,32 +102,8 @@ class AlexNetModel(Conv1Model):
         return nn.Sequential(fcn)
 
 class Network():
-    def __init__(self, layers, batch_size=32):
-        self.model = FCNModel(layers)
-        self.criterion = F.mse_loss
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.7)
+    def __init__(self, batch_size=32):
         self.batch_size = batch_size
-        
-    def mse_rnk(self, x, y=None):
-        if y is not None:
-            x = x.sub(y)
-        return x.float().pow(2).sum() / len(x)**3
-
-    def load_xy(self, x, y):
-        return torch.from_numpy(x).float(), torch.from_numpy(y).float()
-
-    def calc_loss(self, output, y, loss_fcn, stats):
-        o_sorted, o_idx = torch.sort(output.data.view(-1))
-        y_sorted, y_idx = torch.sort(y.data)
-        o_idx = o_idx.view_as(y_idx)
-        diff = o_idx.sub(y_idx).abs()
-        mse_rnk = self.mse_rnk(diff)
-        mse = loss_fcn.data[0]
-
-        stats.setLoss('mse', mse)
-        stats.setLoss('mse_rnk', mse_rnk)
-        stats.setList('rankHist', diff.tolist())
-        return mse_rnk
 
     def train(self, epoch, x, y, loss):
         # Set model to training mode for Dropout and BatchNorm operations
@@ -162,14 +139,48 @@ class Network():
         for name, fname in layers:
             Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
 
+class RegressionNet(Network):
+    def __init__(self, layers, batch_size=32):
+        super(RegressionNet, self).__init__(batch_size=batch_size)
+        self.model = FCNModel(layers)
+        self.criterion = F.mse_loss
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
+        
+    def mse_rnk(self, x, y=None):
+        if y is not None:
+            x = x.sub(y)
+        return x.float().pow(2).sum() / len(x)**3
+
+    def load_xy(self, x, y):
+        return torch.from_numpy(x).float(), torch.from_numpy(y).float()
+
+    def calc_loss(self, output, y, loss_fcn, stats):
+        o_sorted, o_idx = torch.sort(output.data.view(-1))
+        y_sorted, y_idx = torch.sort(y.data)
+        o_idx = o_idx.view_as(y_idx)
+        diff = o_idx.sub(y_idx).abs()
+        mse_rnk = self.mse_rnk(diff)
+        mse = loss_fcn.data[0]
+
+        stats.setLoss('mse', mse)
+        stats.setLoss('mse_rnk', mse_rnk)
+        stats.setList('rankHist', diff.tolist())
+        return mse_rnk
+
 class ClassificationNet(Network):
     def __init__(self, layers):
-        super(ClassificationNet, self).__init__(layers)
-        self.model = AlexNetModel(layers)
-        self.criterion = F.nll_loss
+        super(ClassificationNet, self).__init__()
+        self.model = FCNModel(layers)
+        self.criterion = F.cross_entropy
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
 
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).long()
+
+    def print_confusion_matrix(self, pred, y, num_classes):
+        Logger.log("CM ({} classes): TP\tTN\tFP\tFN\tAccurcay\tWeighted".format(num_classes))
+        for i in range(0, num_classes):
+            Logger.log("Class [{}]: {}\t{}\t{}\t{}\t".format(i, i, i, i, i))
 
     def calc_loss(self, output, y, loss_fcn, loss):
         accuracy = 0

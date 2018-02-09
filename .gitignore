@@ -9,5 +9,6 @@ Banknote_shuf.csv
 *.png
 log*
 local_params.txt
+ps.master
 
 !logger.py

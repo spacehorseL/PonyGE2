@@ -27,7 +27,7 @@ class cifar10(base_ff):
     def __init__(self):
         # Initialise base fitness function class.
         super().__init__()
-        self.layers = [16384, 256, 10]
+        self.layers = params['FCN_LAYERS']#[3072, 8192, 8192, 10]
         self.resize = params['RESIZE']
 
         # Read images from dataset
@@ -47,9 +47,10 @@ class cifar10(base_ff):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
         Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
-        Logger.log("Using grammar = {}".format(params['GRAMMAR_FILE'], info=False))
-        Logger.log("Resizing after processing = {}".format(self.resize, info=False))
-        Logger.log("Network structure = \n{}".format(ClassificationNet(self.layers).model, info=False))
+        Logger.log("Using grammar = {}".format(params['GRAMMAR_FILE']), info=False)
+        Logger.log("Resizing after processing = {}".format(self.resize), info=False)
+        Logger.log("Batch size = {}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("Network structure = \n{}".format(ClassificationNet(self.layers).model), info=False)
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:
@@ -76,7 +77,7 @@ class cifar10(base_ff):
 
         train_loss = stats('mse')
         test_loss = stats('accuracy')
-        kf, freq = KFold(n_splits=params['CROSS_VALIDATION_SPLIT']), params["EPOCH_FREQ"]
+        kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         net = ClassificationNet(self.layers)
         fitness, early_stop, fold = 0, 0, 1
 
@@ -93,8 +94,11 @@ class cifar10(base_ff):
                     batch += 1
                     # if batch % 10 == 0:
                     #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
-                if epoch % freq == 0:
+                if epoch % params['TRAIN_FREQ'] == 0:
                     Logger.log("Epoch {}\tTraining loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                if epoch % params['VALIDATION_FREQ'] == 0:
+                    net.test(X_val, y_val, test_loss)
+                    Logger.log("Epoch {}\tValidation loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
                 if abs(prev - train_loss.getLoss('mse')) < 1e-6:
                     early_stop += 1
                     if early_stop > 10:
@@ -104,7 +108,7 @@ class cifar10(base_ff):
                     early_stop = 0
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')
-            Logger.log("Cross Validation [Fold {}/{}] (MSE/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+            Logger.log("Cross Validation [Fold {}/{}] (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
             fold = fold + 1
         fitness /= kf.get_n_splits()
 

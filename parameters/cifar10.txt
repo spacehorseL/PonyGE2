@@ -25,4 +25,6 @@ BATCH_SIZE:             500
 PARENT_FILE:            local_params.txt
 DATASET:                5
 CONVOLUTION:            True
-EPOCH_FREQ:             5
+TRAIN_FREQ:             5
+VALIDATION_FREQ:        5
+FCN_LAYERS:            [3072, 3072, 3072, 10]
