@@ -178,9 +178,18 @@ class ClassificationNet(Network):
         return torch.from_numpy(x).float(), torch.from_numpy(y).long()
 
     def print_confusion_matrix(self, pred, y, num_classes):
-        Logger.log("CM ({} classes): TP\tTN\tFP\tFN\tAccurcay\tWeighted".format(num_classes))
+        num_pred = pred.size()[0]
+        pred, y = pred.view(-1).numpy(), y.view(-1).numpy()
+        def dot(v1, v2):
+            return np.dot(v1.astype(np.int), v2.astype(np.int))
+        Logger.log("CM ({} cls): TP\tFP\tTN\tFN\tAccurcay\tTotal: {}".format(num_classes, num_pred))
         for i in range(0, num_classes):
-            Logger.log("Class [{}]: {}\t{}\t{}\t{}\t".format(i, i, i, i, i))
+            p_, y_ = pred==i, y==i
+            p_neg, y_neg = p_==0, y_==0
+            tp, tn, fp, fn = dot(p_, y_), dot(p_neg, y_neg), dot(p_, y_neg), dot(p_neg, y_)
+            num_c = p_.sum()
+            weighted = tp / num_c + tn / (num_pred - num_c)
+            Logger.log("Class [{:02d}]: {}\t{}\t{}\t{}\t{:.6f}\t{}".format(i, tp, tn, fp, fn, weighted, num_c))
 
     def calc_loss(self, output, y, loss_fcn, loss):
         accuracy = 0
@@ -190,4 +199,5 @@ class ClassificationNet(Network):
         accuracy /= len(output.data)
         loss.setLoss('mse', mse)
         loss.setLoss('accuracy', accuracy)
+        self.print_confusion_matrix(pred, y.data, output.size()[1])
         return accuracy
