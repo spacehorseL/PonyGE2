@@ -121,7 +121,7 @@ class Network():
         self.optimizer.step()
         loss.setLoss('mse', loss_fcn.data[0])
 
-    def test(self, x, y, loss):
+    def test(self, x, y, loss, print_confusion=False):
         self.model.eval()
         x, y = self.load_xy(x, y)
         if params['CUDA_ENABLED']:
@@ -131,7 +131,7 @@ class Network():
         output = self.model(x)
         loss_fcn = self.criterion(output, y)
         
-        return self.calc_loss(output, y, loss_fcn, loss)
+        return self.calc_loss(output, y, loss_fcn, loss, print_confusion=print_confusion)
     
     def visualize(self, layers, image_size, canvas_size):
         Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
@@ -179,10 +179,10 @@ class ClassificationNet(Network):
 
     def print_confusion_matrix(self, pred, y, num_classes):
         num_pred = pred.size()[0]
-        pred, y = pred.view(-1).numpy(), y.view(-1).numpy()
+        pred, y = pred.view(-1).cpu().numpy(), y.view(-1).cpu().numpy()
         def dot(v1, v2):
             return np.dot(v1.astype(np.int), v2.astype(np.int))
-        Logger.log("CM ({} cls): TP\tFP\tTN\tFN\tAccurcay\tTotal: {}".format(num_classes, num_pred))
+        Logger.log("CM ({} cls): TP\tTN\tFP\tFN\tAccurcay\tTotal: {}".format(num_classes, num_pred))
         for i in range(0, num_classes):
             p_, y_ = pred==i, y==i
             p_neg, y_neg = p_==0, y_==0
@@ -191,7 +191,7 @@ class ClassificationNet(Network):
             weighted = tp / num_c + tn / (num_pred - num_c)
             Logger.log("Class [{:02d}]: {}\t{}\t{}\t{}\t{:.6f}\t{}".format(i, tp, tn, fp, fn, weighted, num_c))
 
-    def calc_loss(self, output, y, loss_fcn, loss):
+    def calc_loss(self, output, y, loss_fcn, loss, print_confusion=False):
         accuracy = 0
         mse = loss_fcn.data[0]
         pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
@@ -199,5 +199,6 @@ class ClassificationNet(Network):
         accuracy /= len(output.data)
         loss.setLoss('mse', mse)
         loss.setLoss('accuracy', accuracy)
-        self.print_confusion_matrix(pred, y.data, output.size()[1])
+        # if print_confusion:
+        #     self.print_confusion_matrix(pred, y.data, output.size()[1])
         return accuracy

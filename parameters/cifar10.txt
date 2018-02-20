@@ -27,4 +27,4 @@ DATASET:                5
 CONVOLUTION:            True
 TRAIN_FREQ:             5
 VALIDATION_FREQ:        5
-FCN_LAYERS:            [3072, 3072, 3072, 10]
+FCN_LAYERS:            [3072, 10]

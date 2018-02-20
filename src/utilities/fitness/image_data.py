@@ -6,7 +6,7 @@ from utilities.stats.logger import Logger
 
 class ImageData:
     def __init__(self, data):
-        self.data = data
+        self.data = np.uint8(data)
     def __str__(self):
         return "image d"
     def setData(self, data):
@@ -23,7 +23,7 @@ class ImageProcessor:
             cls.image = img
             result = ind.tree.evaluate_tree()
             if resize and result.shape is not resize:
-                result = cv.pyrDown(result, dstsize=resize)
+                result = cv.resize(result, resize)
             processed.append(result)
         return np.asarray(processed)
 
@@ -108,3 +108,6 @@ class ImageProcessor:
 
     def imgx(self, args):
         return ImageData(self.image)
+
+    def imgx_orig(self, args):
+        return np.uint8(self.image)

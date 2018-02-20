@@ -71,7 +71,7 @@ class cifar10(base_ff):
         Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
         processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
         processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
-
+        X_test, y_test = processed_test, self.y_test
         image = ImageProcessor.image
         init_size = image.shape[0]*image.shape[1]*image.shape[2]
 
@@ -79,14 +79,14 @@ class cifar10(base_ff):
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         net = ClassificationNet(self.layers)
-        fitness, early_stop, fold = 0, 0, 1
+        fitness, fold = 0, 1
 
         Logger.log("Training Start: ")
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
-            prev, early_stop = 0, 0
+            early_ckpt, early_crit, early_stop, epsilon = 10, 3, [], 1e-4
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
                 batch = 0
                 for x, y in data_train:
@@ -95,17 +95,23 @@ class cifar10(base_ff):
                     # if batch % 10 == 0:
                     #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
                 if epoch % params['TRAIN_FREQ'] == 0:
-                    Logger.log("Epoch {}\tTraining loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                    Logger.log("Epoch {} Training loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
                 if epoch % params['VALIDATION_FREQ'] == 0:
                     net.test(X_val, y_val, test_loss)
-                    Logger.log("Epoch {}\tValidation loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
-                if abs(prev - train_loss.getLoss('mse')) < 1e-6:
-                    early_stop += 1
-                    if early_stop > 10:
-                        Logger.log("Early stopping at epoch {}".format(epoch))
-                        break
-                else:
-                    early_stop = 0
+                    Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+                    net.test(X_test, y_test, test_loss)
+                    Logger.log("Epoch {} Test loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+                if epoch == early_ckpt:
+                    accuracy = net.test(X_test, y_test, test_loss, print_confusion=True)
+                    early_stop.append(accuracy)
+                    if len(early_stop) > 3:
+                        latest_acc = early_stop[-early_crit:]
+                        latest_acc = np.subtract(latest_acc, latest_acc[1:]+[0])
+                        if (abs(latest_acc[:-1]) < epsilon).all() == True:
+                            Logger.log("Early stopping at epoch {} (latest {} ckpts): {}".format(epoch, early_crit, " ".join(["{:.4f}".format(x) for x in early_stop[-early_crit:]])))
+                            break
+                        print(latest_acc, (abs(latest_acc[:-1]) < epsilon))
+                    early_ckpt *= 2
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')
             Logger.log("Cross Validation [Fold {}/{}] (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
