@@ -18,7 +18,7 @@ def search_loop():
 
     if params['MULTICORE']:
         # initialize pool once, if mutlicore is enabled
-        params['POOL'] = Pool(processes=params['CORES'], initializer=pool_init,
+        params['POOL'] = ThreadPool(processes=params['CORES'], initializer=pool_init,
                               initargs=(params,))  # , maxtasksperchild=1)
 
     Logger.log("Generation 0 starts. Initializing...")
