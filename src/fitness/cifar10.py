@@ -34,7 +34,7 @@ class cifar10(base_ff):
         Logger.log("Reading images from {0} ...".format(params['DATASET']), info=False)
 
         X, Y = np.array([]), np.array([])
-        for num in range(1, 6):
+        for num in range(1, 2):
             datapath = os.path.join(params['DATASET'], 'data_batch_'+str(num))
             x, y = self.read_cifar(datapath)
             # print(x, y)
@@ -110,7 +110,6 @@ class cifar10(base_ff):
                         if (abs(latest_acc[:-1]) < epsilon).all() == True:
                             Logger.log("Early stopping at epoch {} (latest {} ckpts): {}".format(epoch, early_crit, " ".join(["{:.4f}".format(x) for x in early_stop[-early_crit:]])))
                             break
-                        print(latest_acc, (abs(latest_acc[:-1]) < epsilon))
                     early_ckpt *= 2
             net.test(X_val, y_val, test_loss)
             fitness += test_loss.getLoss('accuracy')

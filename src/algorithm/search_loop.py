@@ -1,4 +1,4 @@
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from algorithm.parameters import params
 from fitness.evaluation import evaluate_fitness
 from stats.stats import stats, get_stats

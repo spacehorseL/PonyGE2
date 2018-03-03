@@ -7,7 +7,11 @@ Banknote_shuf.csv
 .idea/
 *.jpg
 *.png
+
 log*
+tmp*
+info
+run.sh
 local_params.txt
 ps.master
 
