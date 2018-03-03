@@ -240,9 +240,11 @@ class Tree:
 
         evaluated = []
         for i in range(1, len(self.children)):
+            if len(self.children[i].children) == 0:
+                self.children[i].children = [str(self.children[i])]
             evaluated.append(self.children[i].evaluate_tree())
 
-        operator = re.sub(r'\(|\)|<.*>|\W*', '', str(self.children[0]))
+        operator = re.sub(r'\(|\)|<.*>', '', str(self.children[0]))
 
         return ImageProcessor.process(operator, evaluated)
 

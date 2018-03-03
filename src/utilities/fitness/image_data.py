@@ -29,6 +29,8 @@ class ImageProcessor:
 
     @classmethod
     def process(cls, operator, arguments):
+        if operator.isdigit():
+            return int(operator)
         return cls.__getattribute__(cls, operator)(cls, arguments)
 
     def partOfImageERC(self, args):
@@ -50,7 +52,7 @@ class ImageProcessor:
 
     def channel(self, args):
         src = np.uint8(args[0].getData())
-        choice = int(args[1] * 7)
+        choice = int(args[1] * 7) if args[1] < 1 else int(args[1])
         if choice == 0:
             dest = cv.cvtColor(src, cv.COLOR_RGB2GRAY)
         elif choice <= 3:
@@ -74,6 +76,12 @@ class ImageProcessor:
         std = kernel * args[2]
         kernel = kernel * 2 + 1
         return args[0].setData(cv.GaussianBlur(src, (kernel, kernel), std))
+
+    def medianFilter(self, args):
+        src = np.uint8(args[0].getData())
+        kernel = int(args[1]) // 2 if args[1] > 3 else 1
+        kernel = kernel * 2 + 1
+        return args[0].setData(cv.medianBlur(src, kernel))
 
     def noise2D(self, args):
         src = np.uint8(args[0].getData())
