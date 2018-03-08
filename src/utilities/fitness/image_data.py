@@ -62,6 +62,14 @@ class ImageProcessor:
             dest = cv.split(src_hsv)[choice-4]
         return args[0].setData(dest)
 
+    def white(self, args):
+        src = np.uint8(args[0].getData())
+        return args[0].setData(np.ones(src.shape[:2]) * 255)
+
+    def black(self, args):
+        src = np.uint8(args[0].getData())
+        return args[0].setData(np.zeros(src.shape[:2]))
+
     def canny(self, args):
         src = np.uint8(args[0].getData())
         return args[0].setData(cv.Canny(src, args[1], args[2]))

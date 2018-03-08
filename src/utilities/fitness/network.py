@@ -86,7 +86,7 @@ class AlexNetModel(Conv1Model):
 
     def set_conv(self):
         fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=5)
+        fcn['conv1'] = nn.Conv2d(params['INPUT_CHANNEL'], 64, kernel_size=11, stride=4, padding=5)
         fcn['relu1'] = nn.ReLU(inplace=True)
         fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
         fcn['conv2'] = nn.Conv2d(64, 192, kernel_size=5, padding=2)
@@ -103,6 +103,8 @@ class AlexNetModel(Conv1Model):
 
 class Network():
     def __init__(self, batch_size=32):
+        if params['RANDOM_SEED']:
+            torch.manual_seed(int(params['RANDOM_SEED']))
         self.batch_size = batch_size
 
     def train(self, epoch, x, y, loss):
@@ -130,9 +132,9 @@ class Network():
 
         output = self.model(x)
         loss_fcn = self.criterion(output, y)
-        
+
         return self.calc_loss(output, y, loss_fcn, loss, print_confusion=print_confusion)
-    
+
     def visualize(self, layers, image_size, canvas_size):
         Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
         model = [m for m in self.model.modules()][1] if params['CUDA_ENABLED'] else self.model
@@ -145,7 +147,7 @@ class RegressionNet(Network):
         self.model = FCNModel(layers)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
-        
+
     def mse_rnk(self, x, y=None):
         if y is not None:
             x = x.sub(y)
@@ -170,7 +172,7 @@ class RegressionNet(Network):
 class ClassificationNet(Network):
     def __init__(self, layers):
         super(ClassificationNet, self).__init__()
-        self.model = FCNModel(layers)
+        self.model = eval(params['NETWORK_MODEL'])(layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
 

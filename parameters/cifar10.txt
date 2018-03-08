@@ -28,3 +28,6 @@ CONVOLUTION:            True
 TRAIN_FREQ:             2
 VALIDATION_FREQ:        2
 FCN_LAYERS:            [3072, 10]
+NETWORK_MODEL:          AlexNetModel
+INPUT_CHANNEL:          3
+RANDOM_SEED:            None 
