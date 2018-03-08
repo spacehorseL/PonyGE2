@@ -101,6 +101,27 @@ class AlexNetModel(Conv1Model):
         fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
 
+class AlexNetModel2(Conv1Model):
+    def __init__(self, layers):
+        super(AlexNetModel2, self).__init__([320, 10])
+
+    def set_conv(self):
+        fcn = collections.OrderedDict()
+        fcn['conv1'] = nn.Conv2d(params['INPUT_CHANNEL'], 80, kernel_size=11, stride=4, padding=5)
+        fcn['relu1'] = nn.ReLU(inplace=True)
+        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        fcn['conv2'] = nn.Conv2d(80, 240, kernel_size=5, padding=2)
+        fcn['relu2'] = nn.ReLU(inplace=True)
+        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        fcn['conv3'] = nn.Conv2d(240, 480, kernel_size=3, padding=1)
+        fcn['relu3'] = nn.ReLU(inplace=True)
+        fcn['conv4'] = nn.Conv2d(480, 320, kernel_size=3, padding=1)
+        fcn['relu4'] = nn.ReLU(inplace=True)
+        fcn['conv5'] = nn.Conv2d(320, 320, kernel_size=3, padding=1)
+        fcn['relu5'] = nn.ReLU(inplace=True)
+        fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
+        return nn.Sequential(fcn)
+
 class Network():
     def __init__(self, batch_size=32):
         if params['RANDOM_SEED']:
