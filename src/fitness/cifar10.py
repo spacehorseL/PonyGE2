@@ -34,10 +34,9 @@ class cifar10(base_ff):
         Logger.log("Reading images from {0} ...".format(params['DATASET']), info=False)
 
         X, Y = np.array([]), np.array([])
-        for num in range(1, 2):
+        for num in range(1, 6):
             datapath = os.path.join(params['DATASET'], 'data_batch_'+str(num))
             x, y = self.read_cifar(datapath)
-            # print(x, y)
             X = np.append(X, x)
             Y = np.append(Y, y)
         X = np.reshape(X, (-1, 32,32,3))
