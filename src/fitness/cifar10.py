@@ -7,7 +7,7 @@ from utilities.fitness.network import ClassificationNet
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
-import os, csv, random, pickle
+import os, csv, random, pickle, time
 
 class DataIterator():
     def __init__(self, X, Y, batch_size=64):
@@ -102,6 +102,7 @@ class cifar10(base_ff):
         Logger.log("Training Start: ")
 
         # Cross validation
+        s_time = np.empty((kf.get_n_splits()))
         validation_acc = np.empty((kf.get_n_splits()))
         test_acc = np.empty((kf.get_n_splits()))
         for train_index, val_index in kf.split(processed_train):
@@ -109,6 +110,7 @@ class cifar10(base_ff):
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
             early_ckpt, early_crit, early_stop, epsilon = 10, 3, [], 1e-4
+            s_time[fold-1] = time.time()
 
             # Train model
             net.model.reinitialize_params()
@@ -150,12 +152,16 @@ class cifar10(base_ff):
             test_acc[fold-1] = test_loss.getLoss('accuracy')
             Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
 
+            # Calculate time
+            s_time[fold-1] = time.time() - s_time[fold-1]
+            Logger.log("Cross Validation [Fold {}/{}] Training Time (m): {:.3f}".format(fold, kf.get_n_splits(), s_time[fold-1]/60))
+
             fold = fold + 1
 
         fitness = validation_acc.mean()
 
         for i in range(0, kf.get_n_splits()):
-            Logger.log("STAT -- Model[{}/{}] Validation / Generalization accuracy (%): {:.4f} {:.4f}".format(i, kf.get_n_splits(), validation_acc[i]*100, test_acc[i]*100))
+            Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization accuracy (%): {:.4f} {:.4f}".format(i, kf.get_n_splits(), s_time[i]/60, validation_acc[i]*100, test_acc[i]*100))
         Logger.log("STAT -- Mean Validation / Generatlization accuracy (%): {:.4f} {:.4f}".format(validation_acc.mean()*100, test_acc.mean()*100))
         # ind.net = net
         params['CURRENT_EVALUATION'] += 1
