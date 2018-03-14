@@ -31,7 +31,7 @@ class cifar10(base_ff):
         self.resize = params['RESIZE']
 
         # Read images from dataset
-        Logger.log("Reading images from {} ...".format(params['DATASET']), info=False)
+        Logger.log("Reading images from {0} ...".format(params['DATASET']), info=False)
 
         X, Y = np.array([]), np.array([])
         for num in range(1, 6):
@@ -40,35 +40,16 @@ class cifar10(base_ff):
             X = np.append(X, x)
             Y = np.append(Y, y)
         X = np.reshape(X, (-1, 32,32,3))
-        Logger.log("Done reading dataset with {} images...".format(len(X)), info=False)
+        Logger.log("Done reading dataset with {0} images...".format(len(X)), info=False)
 
         # Train & test split
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("General Setup --", info=False)
-        Logger.log("\tCUDA enabled: \t{}".format(params['CUDA_ENABLED']), info=False)
-        Logger.log("\tDebug network enabled: \t{}".format(params['DEBUG_NET']), info=False)
-
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("Data Preprocess --", info=False)
-        Logger.log("\tNumber of samples: \t{}".format(len(X)), info=False)
-        Logger.log("\tTraining / Test split: \t{}/{}".format(len(self.X_train), len(self.X_test)), info=False)
-        Logger.log("\tImage size: \t{}".format(self.X_train[0].shape), info=False)
-
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("GP Setup --", info=False)
-        Logger.log("\tGrammar file: \t{}".format(params['GRAMMAR_FILE']), info=False)
-        Logger.log("\tPoupulation size: \t{}".format(params['POPULATION_SIZE']), info=False)
-        Logger.log("\tGeneration num: \t{}".format(params['GENERATIONS']), info=False)
-        Logger.log("\tImage resizing (after proc): \t{}".format(self.resize), info=False)
-        Logger.log("\tTree depth init (Min/Max): \t{}/{}".format(params['MIN_INIT_TREE_DEPTH'], params['MAX_INIT_TREE_DEPTH']), info=False)
-        Logger.log("\tTree depth Max: \t\t{}".format(params['MAX_TREE_DEPTH']), info=False)
-
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("Neural Network Setup --", info=False)
-        Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(ClassificationNet(self.layers).model), info=False)
+        Logger.log("Training & Test split: {0}/{1} with size {2}".format(len(self.X_train), len(self.X_test), self.X_train[0].shape), info=False)
+        Logger.log("CUDA ENABLED = {}".format(params['CUDA_ENABLED']), info=False)
+        Logger.log("Using grammar = {}".format(params['GRAMMAR_FILE']), info=False)
+        Logger.log("Resizing after processing = {}".format(self.resize), info=False)
+        Logger.log("Batch size = {}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("Network structure = \n{}".format(ClassificationNet(self.layers).model), info=False)
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:
@@ -100,35 +81,25 @@ class cifar10(base_ff):
         fitness, fold = 0, 1
 
         Logger.log("Training Start: ")
-
-        # Cross validation
-        validation_acc = np.empty((kf.get_n_splits()))
-        test_acc = np.empty((kf.get_n_splits()))
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
             early_ckpt, early_crit, early_stop, epsilon = 10, 3, [], 1e-4
-
-            # Train model
-            net.model.reinitialize_params()
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
-                # mini-batch training
+                batch = 0
                 for x, y in data_train:
                     net.train(epoch, x, y, train_loss)
-
-                # log training loss
+                    batch += 1
+                    # if batch % 10 == 0:
+                    #     Logger.log("Batch {}/{}".format(batch, data_train.num_splits))
                 if epoch % params['TRAIN_FREQ'] == 0:
                     Logger.log("Epoch {} Training loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
-
-                # log validation/test loss
                 if epoch % params['VALIDATION_FREQ'] == 0:
                     net.test(X_val, y_val, test_loss)
                     Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
                     net.test(X_test, y_test, test_loss)
                     Logger.log("Epoch {} Test loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
-
-                # check for early stop
                 if epoch == early_ckpt:
                     accuracy = net.test(X_test, y_test, test_loss, print_confusion=True)
                     early_stop.append(accuracy)
@@ -139,24 +110,14 @@ class cifar10(base_ff):
                             Logger.log("Early stopping at epoch {} (latest {} ckpts): {}".format(epoch, early_crit, " ".join(["{:.4f}".format(x) for x in early_stop[-early_crit:]])))
                             break
                     early_ckpt *= 2
-
-            # Validate model
             net.test(X_val, y_val, test_loss)
-            validation_acc[fold-1] = test_loss.getLoss('accuracy')
-            Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
-
-            # Test model
-            net.test(processed_test, self.y_test, test_loss)
-            test_acc[fold-1] = test_loss.getLoss('accuracy')
-            Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
-
+            fitness += test_loss.getLoss('accuracy')
+            Logger.log("Cross Validation [Fold {}/{}] (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
             fold = fold + 1
+        fitness /= kf.get_n_splits()
 
-        fitness = validation_acc.mean()
-
-        for i in range(0, kf.get_n_splits()):
-            Logger.log("STAT -- Model[{}/{}] Validation / Generalization accuracy (%): {:.4f} {:.4f}".format(i, kf.get_n_splits(), validation_acc[i]*100, test_acc[i]*100))
-        Logger.log("STAT -- Mean Validation / Generatlization accuracy (%): {:.4f} {:.4f}".format(validation_acc.mean()*100, test_acc.mean()*100))
-        # ind.net = net
+        net.test(processed_test, self.y_test, test_loss)
+        ind.net = net
+        Logger.log("Generalization Loss (MSE/Accuracy): {:.6f} {:.6f}".format(test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
         params['CURRENT_EVALUATION'] += 1
         return fitness

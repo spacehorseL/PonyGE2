@@ -36,6 +36,21 @@ class Model(nn.Module):
                 fcn["reluf"+str(l)] = nn.ReLU(inplace=True)
         return nn.Sequential(fcn)
 
+    def reinitialize_params(self):
+        for l in self.fcn_layers:
+            if hasattr(l, 'weight'):
+                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
+        for l in self.conv_layers:
+            if hasattr(l, 'weight'):
+                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
+        if params['DEBUG_NET']:
+            for l in self.conv_layers:
+                if hasattr(l, 'weight'):
+                    print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
+            for l in self.fcn_layers:
+                if hasattr(l, 'weight'):
+                    print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
+
     def get_module(self):
         return self.model.modules()
 
@@ -72,10 +87,10 @@ class Conv2Model(Conv1Model):
 
     def set_conv(self):
         fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=3, padding=1)
         fcn['relu1'] = nn.ReLU(inplace=True)
         fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv2'] = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        fcn['conv2'] = nn.Conv2d(64, 256, kernel_size=3, padding=1)
         fcn['relu2'] = nn.ReLU(inplace=True)
         fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
@@ -127,6 +142,9 @@ class Network():
         if params['RANDOM_SEED']:
             torch.manual_seed(int(params['RANDOM_SEED']))
         self.batch_size = batch_size
+
+    def reinitialize_params(self):
+        self.model.reinitialize_params()
 
     def train(self, epoch, x, y, loss):
         # Set model to training mode for Dropout and BatchNorm operations
