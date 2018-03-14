@@ -1,0 +1,22 @@
+CUDA_ENABLED:     True
+DATASET_1:        /research/ksleung5/hliang5/data/dribbble_alex_kunchevsky
+DATASET_2:        /research/ksleung5/hliang5/data/pmn_instagram
+DATASET_3:        /research/ksleung5/hliang5/data/artofvisuals
+DATASET_4:        /research/ksleung5/hliang5/data/archidesign
+DATASET_5:        /research/ksleung5/hliang5/data/cifar-10-batches-py
+DATASET_6:        /research/ksleung5/hliang5/data/mnist
+GENERATIONS:      15
+POPULATION_SIZE:  30
+RESIZE:           (16, 16)
+NUM_EPOCHS:       100
+BATCH_SIZE:       4000
+CROSS_VALIDATION_SPLIT: 8
+MIN_INIT_TREE_DEPTH:    3
+MAX_INIT_TREE_DEPTH:    9
+MAX_TREE_DEPTH:         9
+GRAMMAR_FILE:     image_proc64.bnf
+FCN_LAYERS:       [4096, 2048, 10]
+TRAIN_FREQ:       10
+VALIDATION_FREQ:  25
+#MULTICORE:        True
+#CORES:            2 

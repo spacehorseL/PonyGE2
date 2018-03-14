@@ -1,0 +1,16 @@
+<start> ::=
+merge<op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op><op>
+<op> ::= channel<m_op><ERC3>
+       | contrast<op>
+       | noise2D<op><ERC0>
+       | canny<op><ERC1><ERC2>
+       | filter<op><ERC0><ERC2>
+       | threshold<op><ERC1><ERC3>
+       | adaptiveThreshold<op><ERC3><ERC0><ERC1>
+<m_op> ::= meanShiftFilter<m_op><ERC0><ERC1>
+       | gammaCorrection<m_op><ERC2>
+       | imgx
+<ERC0> ::= partOfImageERC
+<ERC1> ::= intensityERC
+<ERC2> ::= scaleERC
+<ERC3> ::= randomERC

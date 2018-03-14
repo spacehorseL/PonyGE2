@@ -12,6 +12,7 @@ log*
 tmp*
 info
 run.sh
+batch.sh
 local_params.txt
 ps.master
 
