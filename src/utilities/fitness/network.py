@@ -37,17 +37,17 @@ class Model(nn.Module):
         return nn.Sequential(fcn)
 
     def reinitialize_params(self):
-        for l in self.fcn_layers:
+        for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
             if hasattr(l, 'weight'):
                 nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
-        for l in self.conv_layers:
+        for l in self.fcn_layers.module if params['CUDA_ENABLED'] else self.fcn_layers:
             if hasattr(l, 'weight'):
                 nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
         if params['DEBUG_NET']:
-            for l in self.conv_layers:
+            for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
                 if hasattr(l, 'weight'):
                     print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
-            for l in self.fcn_layers:
+            for l in self.fcn_layers.module if params['CUDA_ENABLED'] else self.fcn_layers:
                 if hasattr(l, 'weight'):
                     print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
 
