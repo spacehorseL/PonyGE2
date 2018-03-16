@@ -44,6 +44,20 @@ class cifar10(base_ff):
 
         # Train & test split
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+
+        # Check class balance between splits
+        classes = np.unique(Y)
+        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.int32), np.empty((len(classes)), dtype=np.int32)
+        for idx, c in enumerate(classes):
+            class_balance_train[idx] = (self.y_train == c).sum()
+            class_balance_test[idx] = (self.y_test == c).sum()
+        Logger.log("---------------------------------------------------", info=False)
+        Logger.log("Class Balance --", info=False)
+        Logger.log("\tClass: \t{}".format("\t".join([str(c) for c in classes])), info=False)
+        Logger.log("\tTrain: \t{}".format("\t".join([str(n) for n in class_balance_train])), info=False)
+        Logger.log("\tTest: \t{}".format("\t".join([str(n) for n in class_balance_test])), info=False)
+        Logger.log("\tTotal: \t{}".format("\t".join([str(n) for n in class_balance_train + class_balance_test])), info=False)
+
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("General Setup --", info=False)
         Logger.log("\tCUDA enabled: \t{}".format(params['CUDA_ENABLED']), info=False)
