@@ -1,5 +1,6 @@
 from algorithm.parameters import params
 from utilities.fitness.image_data import ImageData, ImageProcessor
+from utilities.fitness.network_processor import NetworkProcessor
 import re
 
 class Tree:
@@ -239,14 +240,23 @@ class Tree:
     def evaluate_tree(self):
 
         evaluated = []
+        print(len(self.children), self.children)
         for i in range(1, len(self.children)):
             if len(self.children[i].children) == 0:
                 self.children[i].children = [str(self.children[i])]
             evaluated.append(self.children[i].evaluate_tree())
 
-        operator = re.sub(r'\(|\)|<.*>', '', str(self.children[0]))
+        operator = re.sub(r'\(|\)|<.*>', '', str(self.children[0])).strip()
 
-        return ImageProcessor.process(operator, evaluated)
+        return eval(params['PROCESSOR']).process(operator, evaluated)
+
+    def get_terminals(self, terminals):
+        for child in self.children:
+            if not child.children:
+                terminals += [child.root]
+            else:
+                terminals += child.get_terminals([])
+        return terminals
 
     def print_tree(self):
         """

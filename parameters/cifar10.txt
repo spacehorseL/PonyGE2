@@ -31,4 +31,5 @@ VALIDATION_FREQ:        2
 FCN_LAYERS:            [3072, 10]
 NETWORK_MODEL:          AlexNetModel
 INPUT_CHANNEL:          3
+PROCESSOR:              ImageProcessor
 RANDOM_SEED:            None 

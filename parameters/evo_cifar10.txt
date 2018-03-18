@@ -6,12 +6,12 @@ DEBUG:                  True
 DEBUG_NET:              False 
 GENERATIONS:            50
 MAX_GENOME_LENGTH:      500
-GRAMMAR_FILE:           image_orig.bnf
+GRAMMAR_FILE:           evo_cnn.bnf
 INITIALISATION:         PI_grow
 INVALID_SELECTION:      False
-MIN_INIT_TREE_DEPTH:    3
-MAX_INIT_TREE_DEPTH:    24
-MAX_TREE_DEPTH:         24
+MIN_INIT_TREE_DEPTH:    8
+MAX_INIT_TREE_DEPTH:    10
+MAX_TREE_DEPTH:         10
 MUTATION:               int_flip_per_codon
 POPULATION_SIZE:        30
 FITNESS_FUNCTION:       evo_layer 
@@ -20,16 +20,18 @@ SELECTION:              tournament
 TOURNAMENT_SIZE:        10
 VERBOSE:                True
 CUDA_ENABLED:           False
-CROSS_VALIDATION_SPLIT: 10
-NUM_EPOCHS:             10 
-BATCH_SIZE:             500
+CROSS_VALIDATION_SPLIT: 3
+NUM_EPOCHS:             15000 
+BATCH_SIZE:             2000
 PARENT_FILE:            local_params.txt
 DATASET:                5
 CONVOLUTION:            True
-TRAIN_FREQ:             2
-VALIDATION_FREQ:        2
+TRAIN_FREQ:             10
+VALIDATION_FREQ:        50
 NETWORK_MODEL:          EvoConvModel 
 INPUT_CHANNEL:          3
 RANDOM_SEED:            None 
+PROCESSOR:              NetworkProcessor
+KERNEL_GROW_RATE:       2
 FCN_LAYERS:             [256, 10]
 CONV_LAYERS:            [(64, 11, None, 4, True), (192, 5, None, 1, True), (384, 3, None, 1, False), (256, 3, None, 1, False), (256, 3, None, 1, True)]

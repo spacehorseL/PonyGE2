@@ -3,6 +3,7 @@ from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_data import ImageData, ImageProcessor
+from utilities.fitness.network_processor import NetworkProcessor
 from utilities.fitness.network import Network, EvoClassificationNet
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
@@ -27,7 +28,7 @@ class evo_layer(base_ff):
     def __init__(self):
         # Initialise base fitness function class.
         super().__init__()
-        self.fcn_layers = params['FCN_LAYERS']#[3072, 8192, 8192, 10]
+        self.fcn_layers = params['FCN_LAYERS']
         self.conv_layers = params['CONV_LAYERS']
         self.resize = params['RESIZE']
 
@@ -81,7 +82,7 @@ class evo_layer(base_ff):
         Logger.log("\tTree depth Max: \t\t{}".format(params['MAX_TREE_DEPTH']), info=False)
 
         Logger.log("---------------------------------------------------", info=False)
-        Logger.log("Neural Network Setup --", info=False)
+        Logger.log("Initial Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
         Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
         Logger.log("\tNetwork structure = \n{}".format(EvoClassificationNet(self.fcn_layers, self.conv_layers).model), info=False)
@@ -102,18 +103,28 @@ class evo_layer(base_ff):
         Logger.log("Depth: {0}\tGenome: {1}".format(max_depth, genome))
 
         # Exec the phenotype.
-        Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
-        processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
-        processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
-        X_test, y_test = processed_test, self.y_test
-        image = ImageProcessor.image
-        init_size = image.shape[0]*image.shape[1]*image.shape[2]
+        X_test, y_test = self.X_test, self.y_test
+        image_size = X_test[0].shape
+        flat_ind, kernel_size = NetworkProcessor.process_network(ind, image_size)
+        Logger.log("Individual: {}".format(flat_ind))
+        Logger.log("New kernel size: {}".format(kernel_size))
+
+        new_conv_layers = []
+        for i, k in enumerate(self.conv_layers):
+            new_conv_layers.append((k[0], kernel_size[i], k[2], k[3], k[4]))
 
         train_loss = stats('mse')
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = EvoClassificationNet(self.fcn_layers, self.conv_layers)
+        net = EvoClassificationNet(self.fcn_layers, new_conv_layers)
         fitness, fold = 0, 1
+
+        Logger.log("---------------------------------------------------", info=False)
+        Logger.log("Neural Network Setup --", info=False)
+        Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
+        Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tNetwork structure = \n{}".format(EvoClassificationNet(self.fcn_layers, self.conv_layers).model), info=False)
+        Logger.log("---------------------------------------------------", info=False)
 
         Logger.log("Training Start: ")
 
@@ -121,8 +132,8 @@ class evo_layer(base_ff):
         s_time = np.empty((kf.get_n_splits()))
         validation_acc = np.empty((kf.get_n_splits()))
         test_acc = np.empty((kf.get_n_splits()))
-        for train_index, val_index in kf.split(processed_train):
-            X_train, X_val = processed_train[train_index], processed_train[val_index]
+        for train_index, val_index in kf.split(self.X_train):
+            X_train, X_val = self.X_train[train_index], self.X_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
             early_ckpt, early_crit, early_stop, epsilon = 10, 3, [], 1e-4
