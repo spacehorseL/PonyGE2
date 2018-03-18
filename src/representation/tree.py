@@ -240,7 +240,6 @@ class Tree:
     def evaluate_tree(self):
 
         evaluated = []
-        print(len(self.children), self.children)
         for i in range(1, len(self.children)):
             if len(self.children[i].children) == 0:
                 self.children[i].children = [str(self.children[i])]

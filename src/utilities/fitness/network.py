@@ -8,154 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-
-class Model(nn.Module):
-    def __init__(self, layers):
-        super(Model, self).__init__()
-        self.layers = layers
-        self.conv_layers = self.set_conv()
-        self.fcn_layers = self.set_fcn(layers)
-
-        if params['CUDA_ENABLED']:
-            if self.conv_layers:
-                self.conv_layers = nn.DataParallel(self.conv_layers).cuda()
-            if self.fcn_layers:
-                self.fcn_layers = nn.DataParallel(self.fcn_layers).cuda()
-
-    def set_conv(self):
-        return
-
-    def set_fcn(self, layers):
-        fcn = collections.OrderedDict()
-        for l in range(1, len(layers)):
-            linear = nn.Linear(layers[l-1], layers[l])
-            nn.init.xavier_uniform(linear.weight, gain=np.sqrt(2))
-            fcn["fcn"+str(l)] = linear
-            if l != len(layers) - 1:
-                fcn["dp"+str(l)] = nn.Dropout(p=0.7)
-                fcn["reluf"+str(l)] = nn.ReLU(inplace=True)
-        return nn.Sequential(fcn)
-
-    def reinitialize_params(self):
-        for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
-            if hasattr(l, 'weight'):
-                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
-        for l in self.fcn_layers.module if params['CUDA_ENABLED'] else self.fcn_layers:
-            if hasattr(l, 'weight'):
-                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
-        if params['DEBUG_NET']:
-            for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
-                if hasattr(l, 'weight'):
-                    print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
-            for l in self.fcn_layers.module if params['CUDA_ENABLED'] else self.fcn_layers:
-                if hasattr(l, 'weight'):
-                    print("Layer {}: \t\t{}".format(str(l), l.weight.mean().data.cpu().numpy()))
-
-    def get_module(self):
-        return self.model.modules()
-
-class FCNModel(Model):
-    def __init__(self, layers):
-        super(FCNModel, self).__init__(layers)
-
-    def forward(self, x):
-        x = x.view(-1, self.layers[0])
-        x = self.fcn_layers(x)
-        return x
-
-class ConvModel(Model):
-    def __init__(self, layers):
-        super(ConvModel, self).__init__(layers)
-
-    def set_conv(self):
-        fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        fcn['relu1'] = nn.ReLU(inplace=True)
-        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        return nn.Sequential(fcn)
-
-    def forward(self, x):
-        x = x.view(x.size(0), x.size(3), x.size(1), x.size(2))
-        x = self.conv_layers(x)
-        x = x.view(x.size(0), -1)
-        x = self.fcn_layers(x)
-        return x
-
-class Conv2Model(ConvModel):
-    def __init__(self, layers):
-        super(Conv2Model, self).__init__(layers)
-
-    def set_conv(self):
-        fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(3, 64, kernel_size=3, padding=1)
-        fcn['relu1'] = nn.ReLU(inplace=True)
-        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv2'] = nn.Conv2d(64, 256, kernel_size=3, padding=1)
-        fcn['relu2'] = nn.ReLU(inplace=True)
-        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        return nn.Sequential(fcn)
-
-class AlexNetModel(ConvModel):
-    def __init__(self, layers):
-        super(AlexNetModel, self).__init__([256, 10])
-
-    def set_conv(self):
-        fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(params['INPUT_CHANNEL'], 64, kernel_size=11, stride=4, padding=5)
-        fcn['relu1'] = nn.ReLU(inplace=True)
-        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv2'] = nn.Conv2d(64, 192, kernel_size=5, padding=2)
-        fcn['relu2'] = nn.ReLU(inplace=True)
-        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv3'] = nn.Conv2d(192, 384, kernel_size=3, padding=1)
-        fcn['relu3'] = nn.ReLU(inplace=True)
-        fcn['conv4'] = nn.Conv2d(384, 256, kernel_size=3, padding=1)
-        fcn['relu4'] = nn.ReLU(inplace=True)
-        fcn['conv5'] = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        fcn['relu5'] = nn.ReLU(inplace=True)
-        fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        return nn.Sequential(fcn)
-
-class AlexNetModel2(ConvModel):
-    def __init__(self, layers):
-        super(AlexNetModel2, self).__init__([320, 10])
-
-    def set_conv(self):
-        fcn = collections.OrderedDict()
-        fcn['conv1'] = nn.Conv2d(params['INPUT_CHANNEL'], 80, kernel_size=11, stride=4, padding=5)
-        fcn['relu1'] = nn.ReLU(inplace=True)
-        fcn['pool1'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv2'] = nn.Conv2d(80, 240, kernel_size=5, padding=2)
-        fcn['relu2'] = nn.ReLU(inplace=True)
-        fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        fcn['conv3'] = nn.Conv2d(240, 480, kernel_size=3, padding=1)
-        fcn['relu3'] = nn.ReLU(inplace=True)
-        fcn['conv4'] = nn.Conv2d(480, 320, kernel_size=3, padding=1)
-        fcn['relu4'] = nn.ReLU(inplace=True)
-        fcn['conv5'] = nn.Conv2d(320, 320, kernel_size=3, padding=1)
-        fcn['relu5'] = nn.ReLU(inplace=True)
-        fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
-        return nn.Sequential(fcn)
-
-class EvoConvModel(ConvModel):
-    def __init__(self, fcn_layers, conv_layers):
-        self.conv_layers = conv_layers
-        super(EvoConvModel, self).__init__(fcn_layers)
-
-    def set_conv(self):
-        # (output, kernel, padding, stride, pool?)
-        conv = collections.OrderedDict()
-        for idx, l in enumerate(self.conv_layers):
-            input_channel = self.conv_layers[idx-1][0] if idx > 0 else params['INPUT_CHANNEL']
-            output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
-            padding = l[2] if l[2] != None else kernel // 2
-
-            conv['conv'+str(idx)] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
-            nn.init.xavier_uniform(conv['conv'+str(idx)].weight, gain=np.sqrt(2))
-            conv['relu'+str(idx)] = nn.ReLU(inplace=True)
-            if pool:
-                conv['pool'+str(idx)] = nn.MaxPool2d(kernel_size=2, stride=2)
-        return nn.Sequential(conv)
+from utilities.fitness.models.plain_nets import *
 
 class Network():
     def __init__(self, batch_size=32):
@@ -241,9 +94,9 @@ class RegressionNet(Network):
         return mse_rnk
 
 class ClassificationNet(Network):
-    def __init__(self, layers):
+    def __init__(self, fcn_layers, conv_layers):
         super(ClassificationNet, self).__init__()
-        self.model = eval(params['NETWORK_MODEL'])(layers)
+        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
 
@@ -278,7 +131,6 @@ class ClassificationNet(Network):
 
 class EvoClassificationNet(ClassificationNet):
     def __init__(self, fcn_layers, conv_layers):
-        super(EvoClassificationNet, self).__init__(fcn_layers)
-        self.model = EvoConvModel(fcn_layers, conv_layers)
+        self.model = ConvModel(fcn_layers, conv_layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)

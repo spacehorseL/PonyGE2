@@ -27,7 +27,7 @@ class NetworkProcessor:
         return min(self.processed[-1] + np.random.poisson(params['KERNEL_GROW_RATE'])*2, self.input_size[0]//2)
 
     def shrink(self, args):
-        return max(self.processed[-1] - np.random.poisson(params['KERNEL_GROW_RATE'])*2, 3)
+        return max(self.processed[-1] - np.random.poisson(params['KERNEL_GROW_RATE'])*2, 1)
 
     def same(self, args):
         return self.processed[-1]

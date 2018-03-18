@@ -30,7 +30,8 @@ TRAIN_FREQ:             10
 VALIDATION_FREQ:        50
 NETWORK_MODEL:          EvoConvModel 
 INPUT_CHANNEL:          3
-RANDOM_SEED:            None 
+RANDOM_SEED:            None
+RESIZE:                 None 
 PROCESSOR:              NetworkProcessor
 KERNEL_GROW_RATE:       2
 FCN_LAYERS:             [256, 10]

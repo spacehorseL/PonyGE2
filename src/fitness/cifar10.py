@@ -82,7 +82,7 @@ class cifar10(base_ff):
         Logger.log("Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
         Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(ClassificationNet(self.layers).model), info=False)
+        Logger.log("\tNetwork structure = \n{}".format(ClassificationNet(self.layers, []).model), info=False)
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:
@@ -110,7 +110,7 @@ class cifar10(base_ff):
         train_loss = stats('mse')
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = ClassificationNet(self.layers)
+        net = ClassificationNet(self.layers, [])
         fitness, fold = 0, 1
 
         Logger.log("Training Start: ")

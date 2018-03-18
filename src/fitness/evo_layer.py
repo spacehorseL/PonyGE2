@@ -123,7 +123,7 @@ class evo_layer(base_ff):
         Logger.log("Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
         Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(EvoClassificationNet(self.fcn_layers, self.conv_layers).model), info=False)
+        Logger.log("\tNetwork structure = \n{}".format(net.model), info=False)
         Logger.log("---------------------------------------------------", info=False)
 
         Logger.log("Training Start: ")
