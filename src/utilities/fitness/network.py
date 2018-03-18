@@ -63,9 +63,9 @@ class FCNModel(Model):
         x = self.fcn_layers(x)
         return x
 
-class Conv1Model(Model):
+class ConvModel(Model):
     def __init__(self, layers):
-        super(Conv1Model, self).__init__(layers)
+        super(ConvModel, self).__init__(layers)
 
     def set_conv(self):
         fcn = collections.OrderedDict()
@@ -81,7 +81,7 @@ class Conv1Model(Model):
         x = self.fcn_layers(x)
         return x
 
-class Conv2Model(Conv1Model):
+class Conv2Model(ConvModel):
     def __init__(self, layers):
         super(Conv2Model, self).__init__(layers)
 
@@ -95,7 +95,7 @@ class Conv2Model(Conv1Model):
         fcn['pool2'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
 
-class AlexNetModel(Conv1Model):
+class AlexNetModel(ConvModel):
     def __init__(self, layers):
         super(AlexNetModel, self).__init__([256, 10])
 
@@ -116,7 +116,7 @@ class AlexNetModel(Conv1Model):
         fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
 
-class AlexNetModel2(Conv1Model):
+class AlexNetModel2(ConvModel):
     def __init__(self, layers):
         super(AlexNetModel2, self).__init__([320, 10])
 
@@ -136,6 +136,26 @@ class AlexNetModel2(Conv1Model):
         fcn['relu5'] = nn.ReLU(inplace=True)
         fcn['pool5'] = nn.MaxPool2d(kernel_size=2, stride=2)
         return nn.Sequential(fcn)
+
+class EvoConvModel(ConvModel):
+    def __init__(self, fcn_layers, conv_layers):
+        self.conv_layers = conv_layers
+        super(EvoConvModel, self).__init__(fcn_layers)
+
+    def set_conv(self):
+        # (output, kernel, padding, stride, pool?)
+        conv = collections.OrderedDict()
+        for idx, l in enumerate(self.conv_layers):
+            input_channel = self.conv_layers[idx-1][0] if idx > 0 else params['INPUT_CHANNEL']
+            output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
+            padding = l[2] if l[2] != None else kernel // 2
+
+            conv['conv'+str(idx)] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
+            nn.init.xavier_uniform(conv['conv'+str(idx)].weight, gain=np.sqrt(2))
+            conv['relu'+str(idx)] = nn.ReLU(inplace=True)
+            if pool:
+                conv['pool'+str(idx)] = nn.MaxPool2d(kernel_size=2, stride=2)
+        return nn.Sequential(conv)
 
 class Network():
     def __init__(self, batch_size=32):
@@ -179,6 +199,18 @@ class Network():
         model = [m for m in self.model.modules()][1] if params['CUDA_ENABLED'] else self.model
         for name, fname in layers:
             Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
+
+    @classmethod
+    def assert_net(cls, conv_layers, fcn_layers, img_shape):
+        output = img_shape
+        for i, l in enumerate(conv_layers):
+            output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
+            factor = 1 if not pool else 2
+            factor *= stride
+            output = (output[0]//factor, output[1]//factor, output_channel)
+            Logger.log("Convolution output at layer {}: {}".format(i, output), info=False)
+        assert fcn_layers[0] == output[0]*output[1]*output[2]
+        return output
 
 class RegressionNet(Network):
     def __init__(self, layers, batch_size=32):
@@ -243,3 +275,10 @@ class ClassificationNet(Network):
         # if print_confusion:
         #     self.print_confusion_matrix(pred, y.data, output.size()[1])
         return accuracy
+
+class EvoClassificationNet(ClassificationNet):
+    def __init__(self, fcn_layers, conv_layers):
+        super(EvoClassificationNet, self).__init__(fcn_layers)
+        self.model = EvoConvModel(fcn_layers, conv_layers)
+        self.criterion = F.cross_entropy
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)

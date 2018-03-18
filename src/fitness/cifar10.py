@@ -47,7 +47,7 @@ class cifar10(base_ff):
 
         # Check class balance between splits
         classes = np.unique(Y)
-        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.int32), np.empty((len(classes)), dtype=np.int32)
+        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.uint8), np.empty((len(classes)), dtype=np.uint8)
         for idx, c in enumerate(classes):
             class_balance_train[idx] = (self.y_train == c).sum()
             class_balance_test[idx] = (self.y_test == c).sum()
