@@ -81,8 +81,9 @@ class cifar10(base_ff):
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(ClassificationNet(self.layers, []).model), info=False)
+        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
+        Logger.log("\tNetwork structure: \n{}".format(ClassificationNet(self.layers, []).model), info=False)
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:

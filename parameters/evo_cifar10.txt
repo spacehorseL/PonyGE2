@@ -34,5 +34,7 @@ RANDOM_SEED:            None
 RESIZE:                 None 
 PROCESSOR:              NetworkProcessor
 KERNEL_GROW_RATE:       2
+LEARNING_RATE:          0.00015
+MOMENTUM:               0.2
 FCN_LAYERS:             [256, 10]
 CONV_LAYERS:            [(64, 11, None, 4, True), (192, 5, None, 1, True), (384, 3, None, 1, False), (256, 3, None, 1, False), (256, 3, None, 1, True)]

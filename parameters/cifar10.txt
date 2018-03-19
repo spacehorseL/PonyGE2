@@ -30,6 +30,8 @@ TRAIN_FREQ:             2
 VALIDATION_FREQ:        2
 FCN_LAYERS:            [3072, 10]
 NETWORK_MODEL:          AlexNetModel
+LEARNING_RATE:          0.00015
+MOMENTUM:               0.2
 INPUT_CHANNEL:          3
 PROCESSOR:              ImageProcessor
 RANDOM_SEED:            None 

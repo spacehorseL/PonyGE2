@@ -19,5 +19,7 @@ FITNESS_FUNCTION:       supervised_learning.regression
 REPLACEMENT:            generational
 SELECTION:              tournament
 TOURNAMENT_SIZE:        2
+LEARNING_RATE:          0.00015
+MOMENTUM:               0.2
 PROCESSOR:              ImageProcessor
 VERBOSE:                False

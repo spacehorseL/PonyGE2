@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 from utilities.fitness.models.plain_nets import *
+from utilities.fitness.models.res_nets import *
 
 class Network():
     def __init__(self, batch_size=32):
@@ -70,7 +71,7 @@ class RegressionNet(Network):
         super(RegressionNet, self).__init__(batch_size=batch_size)
         self.model = FCNModel(layers)
         self.criterion = F.mse_loss
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
 
     def mse_rnk(self, x, y=None):
         if y is not None:
@@ -98,7 +99,7 @@ class ClassificationNet(Network):
         super(ClassificationNet, self).__init__()
         self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
         self.criterion = F.cross_entropy
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
 
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).long()
@@ -133,4 +134,4 @@ class EvoClassificationNet(ClassificationNet):
     def __init__(self, fcn_layers, conv_layers):
         self.model = ConvModel(fcn_layers, conv_layers)
         self.criterion = F.cross_entropy
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.00015, momentum=0.8)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])

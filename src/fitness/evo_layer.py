@@ -50,7 +50,7 @@ class evo_layer(base_ff):
 
         # Check class balance between splits
         classes = np.unique(Y)
-        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.uint8), np.empty((len(classes)), dtype=np.uint8)
+        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.int32), np.empty((len(classes)), dtype=np.int32)
         for idx, c in enumerate(classes):
             class_balance_train[idx] = (self.y_train == c).sum()
             class_balance_test[idx] = (self.y_test == c).sum()
@@ -84,8 +84,9 @@ class evo_layer(base_ff):
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("Initial Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(EvoClassificationNet(self.fcn_layers, self.conv_layers).model), info=False)
+        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
+        Logger.log("\tNetwork structure: \n{}".format(EvoClassificationNet(self.fcn_layers, self.conv_layers).model), info=False)
 
     def read_cifar(self, fname):
         with open(fname, 'rb') as f:
@@ -122,7 +123,8 @@ class evo_layer(base_ff):
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("Neural Network Setup --", info=False)
         Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size = \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
         Logger.log("\tNetwork structure = \n{}".format(net.model), info=False)
         Logger.log("---------------------------------------------------", info=False)
 
@@ -175,7 +177,7 @@ class evo_layer(base_ff):
             Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
 
             # Test model
-            net.test(processed_test, self.y_test, test_loss)
+            net.test(X_test, y_test, test_loss)
             test_acc[fold-1] = test_loss.getLoss('accuracy')
             Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
 
