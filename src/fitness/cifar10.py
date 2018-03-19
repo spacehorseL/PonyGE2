@@ -2,7 +2,7 @@ from algorithm.parameters import params
 from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
-from utilities.fitness.image_data import ImageData, ImageProcessor
+from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network import ClassificationNet
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
@@ -68,6 +68,7 @@ class cifar10(base_ff):
         Logger.log("\tNumber of samples: \t{}".format(len(X)), info=False)
         Logger.log("\tTraining / Test split: \t{}/{}".format(len(self.X_train), len(self.X_test)), info=False)
         Logger.log("\tImage size: \t{}".format(self.X_train[0].shape), info=False)
+        Logger.log("\tNormalize after preprocessing: \t{}".format(params['NORMALIZE']), info=False)
 
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("GP Setup --", info=False)
@@ -104,6 +105,13 @@ class cifar10(base_ff):
         Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
         processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
         processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
+
+        if params['NORMALIZE']:
+            Logger.log("Normalizing processed images...")
+            processed_train, mean, std = ImageProcessor.normalize(self.X_train)
+            processed_test, _, _ = ImageProcessor.normalize(self.X_test, mean=mean, std=std)
+            Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
+
         X_test, y_test = processed_test, self.y_test
         image = ImageProcessor.image
         init_size = image.shape[0]*image.shape[1]*image.shape[2]

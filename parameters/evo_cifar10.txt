@@ -33,6 +33,7 @@ INPUT_CHANNEL:          3
 RANDOM_SEED:            None
 RESIZE:                 None 
 PROCESSOR:              NetworkProcessor
+NORMALIZE:              True
 KERNEL_GROW_RATE:       2
 LEARNING_RATE:          0.00015
 MOMENTUM:               0.2

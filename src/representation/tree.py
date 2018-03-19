@@ -1,5 +1,5 @@
 from algorithm.parameters import params
-from utilities.fitness.image_data import ImageData, ImageProcessor
+from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network_processor import NetworkProcessor
 import re
 

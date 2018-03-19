@@ -4,18 +4,25 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 from utilities.stats.logger import Logger
 
-class ImageData:
-    def __init__(self, data):
-        self.data = np.uint8(data)
-    def __str__(self):
-        return "image d"
-    def setData(self, data):
-        self.data = data
-        return self
-    def getData(self):
-        return self.data
-
 class ImageProcessor:
+    class ImageData:
+        def __init__(self, data):
+            self.data = np.uint8(data)
+        def setData(self, data):
+            self.data = data
+            return self
+        def getData(self):
+            return self.data
+
+    @classmethod
+    def normalize(cls, imgs, mean=None, std=None):
+        if mean is None:
+            mean = imgs.mean(axis=(0,1,2))
+        if std is None:
+            std = imgs.std(axis=(0,1,2))
+        normalized = (imgs - mean)/std
+        return normalized, mean, std
+
     @classmethod
     def process_images(cls, imgs, ind, resize=None):
         processed = []
@@ -123,7 +130,7 @@ class ImageProcessor:
         return args[0].setData(cv.LUT(src, lut3))
 
     def imgx(self, args):
-        return ImageData(self.image)
+        return self.ImageData(self.image)
 
     def imgx_orig(self, args):
         return np.uint8(self.image)

@@ -2,7 +2,7 @@ from algorithm.parameters import params
 from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
-from utilities.fitness.image_data import ImageData, ImageProcessor
+from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network import Network
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
