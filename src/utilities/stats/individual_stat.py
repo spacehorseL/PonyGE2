@@ -1,4 +1,3 @@
-
 class stats():
     def __init__(self, name):
         self.loss = {}
@@ -7,6 +6,12 @@ class stats():
 
     def __str__(self):
         return str(self.loss[self.default_name])
+
+    def __setitem__(self, key, value):
+        self.loss[key] = value
+
+    def __getitem__(self, key):
+        return self.loss[key]
 
     def setList(self, name, l):
         self.lists[name] = l

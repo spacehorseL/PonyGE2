@@ -128,9 +128,9 @@ class cifar10(base_ff):
                 # log validation/test loss
                 if epoch % params['VALIDATION_FREQ'] == 0:
                     net.test(X_val, y_val, test_loss)
-                    Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+                    Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(epoch, test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
                     net.test(X_test, y_test, test_loss)
-                    Logger.log("Epoch {} Test loss (NLL/Accuracy): {:.6f} {:.6f}".format(epoch, test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+                    Logger.log("Epoch {} Test loss (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(epoch, test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
 
                 # check for early stop
                 if epoch == early_ckpt:
@@ -147,12 +147,12 @@ class cifar10(base_ff):
             # Validate model
             net.test(X_val, y_val, test_loss)
             validation_acc[fold-1] = test_loss.getLoss('accuracy')
-            Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+            Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
 
             # Test model
             net.test(processed_test, self.y_test, test_loss)
             test_acc[fold-1] = test_loss.getLoss('accuracy')
-            Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f}".format(fold, kf.get_n_splits(), test_loss.getLoss('mse'), test_loss.getLoss('accuracy')))
+            Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
 
             # Calculate time
             s_time[fold-1] = time.time() - s_time[fold-1]

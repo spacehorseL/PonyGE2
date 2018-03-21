@@ -73,7 +73,7 @@ class RegressionNet(Network):
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
 
-    def mse_rnk(self, x, y=None):
+    def calc_msernk(self, x, y=None):
         if y is not None:
             x = x.sub(y)
         return x.float().pow(2).sum() / len(x)**3
@@ -81,17 +81,15 @@ class RegressionNet(Network):
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).float()
 
-    def calc_loss(self, output, y, loss_fcn, stats):
+    def calc_loss(self, output, y, loss_fcn, loss):
         o_sorted, o_idx = torch.sort(output.data.view(-1))
         y_sorted, y_idx = torch.sort(y.data)
         o_idx = o_idx.view_as(y_idx)
         diff = o_idx.sub(y_idx).abs()
-        mse_rnk = self.mse_rnk(diff)
-        mse = loss_fcn.data[0]
 
-        stats.setLoss('mse', mse)
-        stats.setLoss('mse_rnk', mse_rnk)
-        stats.setList('rankHist', diff.tolist())
+        loss['mse'] = loss_fcn.data[0]
+        loss['mse_rnk'] = self.calc_msernk(diff)
+        loss.setList('rankHist', diff.tolist())
         return mse_rnk
 
 class ClassificationNet(Network):
@@ -118,17 +116,22 @@ class ClassificationNet(Network):
             weighted = tp / num_c + tn / (num_pred - num_c)
             Logger.log("Class [{:02d}]: {}\t{}\t{}\t{}\t{:.6f}\t{}".format(i, tp, tn, fp, fn, weighted, num_c))
 
+    def calc_accuracy(self, output, y):
+        # get the index of the max log-probability
+        pred = output.data.max(1, keepdim=True)[1]
+        return pred.eq(y.data.view_as(pred)).cpu().sum() / len(output.data)
+
+    def calc_topk(self, output, y, k):
+        # topk(): returns tuple (values, indices)
+        return sum([a in b for a,b in zip(y.data, output.data.topk(k)[1])]) / len(output.data)
+
     def calc_loss(self, output, y, loss_fcn, loss, print_confusion=False):
-        accuracy = 0
-        mse = loss_fcn.data[0]
-        pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-        accuracy += pred.eq(y.data.view_as(pred)).cpu().sum()
-        accuracy /= len(output.data)
-        loss.setLoss('mse', mse)
-        loss.setLoss('accuracy', accuracy)
+        loss['mse'] = loss_fcn.data[0]
+        loss['accuracy'] = self.calc_accuracy(output, y)
+        loss['top5'] = self.calc_topk(output, y, 5)
         # if print_confusion:
         #     self.print_confusion_matrix(pred, y.data, output.size()[1])
-        return accuracy
+        return loss['accuracy']
 
 class EvoClassificationNet(ClassificationNet):
     def __init__(self, fcn_layers, conv_layers):
