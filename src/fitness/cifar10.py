@@ -4,23 +4,11 @@ from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network import ClassificationNet
+from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
 import os, csv, random, pickle, time
-
-class DataIterator():
-    def __init__(self, X, Y, batch_size=64):
-        self.num_splits = len(X) // batch_size
-        self.X = np.array_split(X, self.num_splits)
-        self.Y = np.array_split(Y, self.num_splits)
-        self.cursor = 0
-    def __iter__(self):
-        return zip(self.X, self.Y)
-    def next(self, step=1):
-        X, Y = self.X[self.cursor], self.X[self.cursor]
-        self.cursor = (self.cursor + step) % self.num_splits
-        return X, Y
 
 class cifar10(base_ff):
     maximise = True  # True as it ever was.
@@ -36,7 +24,7 @@ class cifar10(base_ff):
         X, Y = np.array([]), np.array([])
         for num in range(1, 6):
             datapath = os.path.join(params['DATASET'], 'data_batch_'+str(num))
-            x, y = self.read_cifar(datapath)
+            x, y = read_cifar(datapath)
             X = np.append(X, x)
             Y = np.append(Y, y)
         X = np.reshape(X, (-1, 32,32,3))
@@ -46,17 +34,13 @@ class cifar10(base_ff):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
 
         # Check class balance between splits
-        classes = np.unique(Y)
-        class_balance_train, class_balance_test = np.empty((len(classes)), dtype=np.uint8), np.empty((len(classes)), dtype=np.uint8)
-        for idx, c in enumerate(classes):
-            class_balance_train[idx] = (self.y_train == c).sum()
-            class_balance_test[idx] = (self.y_test == c).sum()
+        classes, class_balance_train, class_balance_test = check_class_balance(self.y_train, self.y_test)
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("Class Balance --", info=False)
         Logger.log("\tClass: \t{}".format("\t".join([str(c) for c in classes])), info=False)
         Logger.log("\tTrain: \t{}".format("\t".join([str(n) for n in class_balance_train])), info=False)
         Logger.log("\tTest: \t{}".format("\t".join([str(n) for n in class_balance_test])), info=False)
-        Logger.log("\tTotal: \t{}".format("\t".join([str(n) for n in class_balance_train + class_balance_test])), info=False)
+        Logger.log("\tTotal: \t{}\t{}".format("\t".join([str(n) for n in class_balance_train + class_balance_test]), (class_balance_train + class_balance_test).sum()), info=False)
 
         Logger.log("---------------------------------------------------", info=False)
         Logger.log("General Setup --", info=False)
@@ -86,11 +70,6 @@ class cifar10(base_ff):
         Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
         Logger.log("\tNetwork structure: \n{}".format(ClassificationNet(self.layers, []).model), info=False)
 
-    def read_cifar(self, fname):
-        with open(fname, 'rb') as f:
-            d = pickle.load(f, encoding='bytes')
-        return d[b'data'], np.asarray(d[b'labels'])
-
     def evaluate(self, ind, **kwargs):
         # ind.phenotype will be a string, including function definitions etc.
         # When we exec it, it will create a value XXX_output_XXX, but we exec
@@ -108,8 +87,8 @@ class cifar10(base_ff):
 
         if params['NORMALIZE']:
             Logger.log("Normalizing processed images...")
-            processed_train, mean, std = ImageProcessor.normalize(self.X_train)
-            processed_test, _, _ = ImageProcessor.normalize(self.X_test, mean=mean, std=std)
+            processed_train, mean, std = ImageProcessor.normalize(processed_train)
+            processed_test, _, _ = ImageProcessor.normalize(processed_test, mean=mean, std=std)
             Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
 
         X_test, y_test = processed_test, self.y_test
@@ -132,7 +111,7 @@ class cifar10(base_ff):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
             data_train = DataIterator(X_train, y_train, params['BATCH_SIZE'])
-            early_ckpt, early_crit, early_stop, epsilon = 10, 3, [], 1e-4
+            early_ckpt, early_stop, early_crit, epsilon = 4, [], params['EARLY_STOP_FREQ'], params['EARLY_STOP_EPSILON']
             s_time[fold-1] = time.time()
 
             # Train model
@@ -163,7 +142,7 @@ class cifar10(base_ff):
                         if (abs(latest_acc[:-1]) < epsilon).all() == True:
                             Logger.log("Early stopping at epoch {} (latest {} ckpts): {}".format(epoch, early_crit, " ".join(["{:.4f}".format(x) for x in early_stop[-early_crit:]])))
                             break
-                    early_ckpt *= 2
+                    early_ckpt = min(early_ckpt+300, early_ckpt*2)
 
             # Validate model
             net.test(X_val, y_val, test_loss)
@@ -177,7 +156,7 @@ class cifar10(base_ff):
 
             # Calculate time
             s_time[fold-1] = time.time() - s_time[fold-1]
-            Logger.log("Cross Validation [Fold {}/{}] Training Time (m): {:.3f}".format(fold, kf.get_n_splits(), s_time[fold-1]/60))
+            Logger.log("Cross Validation [Fold {}/{}] Training Time (m / m per epoch): {:.3f} {:.3f}".format(fold, kf.get_n_splits(), s_time[fold-1]/60, s_time[fold-1]/60/epoch))
 
             fold = fold + 1
 

@@ -20,6 +20,8 @@ class ImageProcessor:
             mean = imgs.mean(axis=(0,1,2))
         if std is None:
             std = imgs.std(axis=(0,1,2))
+            # Avoid div by 0
+            std[std == 0] = 1
         normalized = (imgs - mean)/std
         return normalized, mean, std
 

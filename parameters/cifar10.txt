@@ -1,3 +1,4 @@
+PARENT_TILE:            global_params.txt
 CACHE:                  True
 CODON_SIZE:             100
 CROSSOVER:              variable_onepoint
@@ -23,7 +24,6 @@ CUDA_ENABLED:           False
 CROSS_VALIDATION_SPLIT: 10
 NUM_EPOCHS:             10 
 BATCH_SIZE:             500
-PARENT_FILE:            local_params.txt
 DATASET:                5
 CONVOLUTION:            True
 TRAIN_FREQ:             2
@@ -35,4 +35,4 @@ LEARNING_RATE:          0.00015
 MOMENTUM:               0.2
 INPUT_CHANNEL:          3
 PROCESSOR:              ImageProcessor
-RANDOM_SEED:            None 
+PARENT_FILE:            local_params.txt

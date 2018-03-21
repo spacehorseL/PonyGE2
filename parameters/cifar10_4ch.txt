@@ -1,4 +1,4 @@
-CUDA_ENABLED:     True
+PARENT_FILE:      global_params.txt
 GENERATIONS:      1
 POPULATION_SIZE:  1
 RESIZE:           None
@@ -14,4 +14,3 @@ TRAIN_FREQ:       10
 VALIDATION_FREQ:  50
 INPUT_CHANNEL:    4
 NETWORK_MODEL:    AlexNetModel
-RANDOM_SEED:      602753 
