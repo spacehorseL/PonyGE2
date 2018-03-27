@@ -30,6 +30,7 @@ TRAIN_FREQ:             10
 VALIDATION_FREQ:        50
 NETWORK_MODEL:          EvoConvModel 
 INPUT_CHANNEL:          3
+AUGMENT_CHANNEL:        True
 RANDOM_SEED:            None
 RESIZE:                 None 
 PROCESSOR:              NetworkProcessor

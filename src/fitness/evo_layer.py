@@ -31,10 +31,26 @@ class evo_layer(base_ff):
             Y = np.append(Y, y)
         X = np.reshape(X, (-1, 32,32,3))
         Logger.log("Done reading dataset with {} images...".format(len(X)), info=False)
+        if params['AUGMENT_CHANNEL']:
+            Logger.log("Augmenting images with extra channel: ", info=False)
+            _X = np.zeros((len(X), 32,32,4))
+            for idx, src in enumerate(X):
+                src = np.uint8(src)
+                aug = cv.cvtColor(cv.pyrMeanShiftFiltering(src, 8, 64), cv.COLOR_RGB2GRAY)
+                # aug = np.array([255]*32*32*1, dtype=np.uint8).reshape((32,32,1))
+                _X[idx] = cv.merge(tuple([src[:,:,0], src[:,:,1], src[:,:,2], aug]))
+            params['INPUT_CHANNEL'] = 4
+            X = _X
         Network.assert_net(self.conv_layers, self.fcn_layers, X[0].shape if not self.resize else self.resize)
 
         # Train & test split
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+
+        if params['NORMALIZE']:
+            Logger.log("Normalizing processed images...", info=False)
+            self.X_train, mean, std = ImageProcessor.normalize(self.X_train)
+            self.X_test, _, _ = ImageProcessor.normalize(self.X_test, mean=mean, std=std)
+            Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std), info=False)
 
         # Check class balance between splits
         classes, class_balance_train, class_balance_test = check_class_balance(self.y_train, self.y_test)
