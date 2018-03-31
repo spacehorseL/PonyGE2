@@ -26,11 +26,11 @@ class ImageProcessor:
         return normalized, mean, std
 
     @classmethod
-    def process_images(cls, imgs, ind, resize=None):
+    def process_images(cls, imgs, tree, resize=None):
         processed = []
         for img in imgs:
             cls.image = img
-            result = ind.tree.evaluate_tree()
+            result = tree.evaluate_tree()
             if resize and result.shape is not resize:
                 result = cv.resize(result, resize)
             processed.append(result)

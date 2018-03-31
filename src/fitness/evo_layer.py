@@ -112,16 +112,8 @@ class evo_layer(base_ff):
         train_loss = stats('mse')
         test_loss = stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = EvoClassificationNet(self.fcn_layers, new_conv_layers)
+        net = ClassificationNet(self.fcn_layers, new_conv_layers)
         fitness, fold = 0, 1
-
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("Neural Network Setup --", info=False)
-        Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
-        Logger.log("\tNetwork structure = \n{}".format(net.model), info=False)
-        Logger.log("---------------------------------------------------", info=False)
 
         Logger.log("Training Start: ")
 

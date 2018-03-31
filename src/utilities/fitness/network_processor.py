@@ -7,9 +7,9 @@ from algorithm.parameters import params
 
 class NetworkProcessor:
     @classmethod
-    def process_network(cls, ind, input_size):
+    def process_network(cls, tree, input_size):
         cls.input_size = input_size
-        instance = ind.tree.get_terminals([])
+        instance = tree.get_terminals([])
         split = np.where(np.array(instance) == 'layer')[0]
         cleaned_instance = [instance[split[i-1]+1:split[i]] for i, t in enumerate(split) if i > 0]
 

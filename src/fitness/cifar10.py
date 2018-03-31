@@ -3,6 +3,7 @@ from fitness.base_ff_classes.base_ff import base_ff
 from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
+from utilities.fitness.network_processor import NetworkProcessor
 from utilities.fitness.network import ClassificationNet
 from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
 from sklearn.model_selection import train_test_split, KFold
@@ -15,7 +16,8 @@ class cifar10(base_ff):
     def __init__(self):
         # Initialise base fitness function class.
         super().__init__()
-        self.layers = params['FCN_LAYERS']#[3072, 8192, 8192, 10]
+        self.fcn_layers = params['FCN_LAYERS']
+        self.conv_layers = params['CONV_LAYERS']
         self.resize = params['RESIZE']
 
         # Read images from dataset
@@ -63,13 +65,6 @@ class cifar10(base_ff):
         Logger.log("\tTree depth init (Min/Max): \t{}/{}".format(params['MIN_INIT_TREE_DEPTH'], params['MAX_INIT_TREE_DEPTH']), info=False)
         Logger.log("\tTree depth Max: \t\t{}".format(params['MAX_TREE_DEPTH']), info=False)
 
-        Logger.log("---------------------------------------------------", info=False)
-        Logger.log("Neural Network Setup --", info=False)
-        Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
-        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
-        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
-        Logger.log("\tNetwork structure: \n{}".format(ClassificationNet(self.layers, []).model), info=False)
-
     def evaluate(self, ind, **kwargs):
         # ind.phenotype will be a string, including function definitions etc.
         # When we exec it, it will create a value XXX_output_XXX, but we exec
@@ -80,25 +75,40 @@ class cifar10(base_ff):
         genome, output, invalid, max_depth, nodes = ind.tree.get_tree_info(params['BNF_GRAMMAR'].non_terminals.keys(),[], [])
         Logger.log("Depth: {0}\tGenome: {1}".format(max_depth, genome))
 
-        # Exec the phenotype.
+        ## Evolve image preprocessor
         Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
-        processed_train = ImageProcessor.process_images(self.X_train, ind, resize=self.resize)
-        processed_test = ImageProcessor.process_images(self.X_test, ind, resize=self.resize)
+        processed_train = ImageProcessor.process_images(self.X_train, ind.tree.children[0], resize=self.resize)
+        processed_test = ImageProcessor.process_images(self.X_test, ind.tree.children[0], resize=self.resize)
 
+        # Normalize image by channel
         if params['NORMALIZE']:
             Logger.log("Normalizing processed images...")
             processed_train, mean, std = ImageProcessor.normalize(processed_train)
             processed_test, _, _ = ImageProcessor.normalize(processed_test, mean=mean, std=std)
             Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
 
+        # Setup test images
         X_test, y_test = processed_test, self.y_test
         image = ImageProcessor.image
         init_size = image.shape[0]*image.shape[1]*image.shape[2]
 
-        train_loss = stats('mse')
-        test_loss = stats('accuracy')
+        ## Evolve network structure
+        if params['EVOLVE_NETWORK']:
+            Logger.log("Network Structure Selection Start: ")
+            flat_ind, kernel_size = NetworkProcessor.process_network(ind.tree.children[1], image.shape)
+            Logger.log("\tIndividual: {}".format(flat_ind))
+            Logger.log("\tNew kernel size: {}".format(kernel_size))
+
+            new_conv_layers = []
+            for i, k in enumerate(self.conv_layers):
+                new_conv_layers.append((k[0], kernel_size[i], k[2], k[3], k[4]))
+        else:
+            new_conv_layers = self.conv_layers
+
+        net = ClassificationNet(self.fcn_layers, new_conv_layers)
+
+        train_loss, test_loss = stats('mse'), stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
-        net = ClassificationNet(self.layers, [])
         fitness, fold = 0, 1
 
         Logger.log("Training Start: ")

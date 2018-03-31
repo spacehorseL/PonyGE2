@@ -247,7 +247,7 @@ class Tree:
 
         operator = re.sub(r'\(|\)|<.*>', '', str(self.children[0])).strip()
 
-        return eval(params['PROCESSOR']).process(operator, evaluated)
+        return ImageProcessor.process(operator, evaluated)
 
     def get_terminals(self, terminals):
         for child in self.children:

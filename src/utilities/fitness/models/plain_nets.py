@@ -77,7 +77,7 @@ class FCNModel(Model):
         return x
 
 class ConvModel(Model):
-    def __init__(self, fcn_layers, conv_layers):
+    def __init__(self, fcn_layers=[256, 10], conv_layers=[]):
         super(ConvModel, self).__init__(fcn_layers, conv_layers)
 
     def forward(self, x):

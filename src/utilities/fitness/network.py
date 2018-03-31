@@ -66,12 +66,22 @@ class Network():
         assert fcn_layers[0] == output[0]*output[1]*output[2]
         return output
 
+    def log_model(self):
+        Logger.log("---------------------------------------------------", info=False)
+        Logger.log("Neural Network Setup --", info=False)
+        Logger.log("\tEpochs / CV fold: \t{} * {} ({} total)".format(params['NUM_EPOCHS'], params['CROSS_VALIDATION_SPLIT'], params['NUM_EPOCHS']*params['CROSS_VALIDATION_SPLIT']), info=False)
+        Logger.log("\tBatch size: \t\t{}".format(params['BATCH_SIZE']), info=False)
+        Logger.log("\tLearning rate / Momentum: \t{} / {}".format(params['LEARNING_RATE'], params['MOMENTUM']), info=False)
+        Logger.log("\tNetwork structure = \n{}".format(self.model), info=False)
+        Logger.log("---------------------------------------------------", info=False)
+
 class RegressionNet(Network):
     def __init__(self, layers, batch_size=32):
         super(RegressionNet, self).__init__(batch_size=batch_size)
         self.model = FCNModel(layers)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
+        self.log_model()
 
     def calc_msernk(self, x, y=None):
         if y is not None:
@@ -98,6 +108,7 @@ class ClassificationNet(Network):
         self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
+        self.log_model()
 
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).long()
@@ -138,3 +149,4 @@ class EvoClassificationNet(ClassificationNet):
         self.model = ConvModel(fcn_layers, conv_layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
+        self.log_model()
