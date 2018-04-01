@@ -131,7 +131,7 @@ class cifar10(base_ff):
                     Logger.log("Epoch {} Training loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
 
                 # log validation/test loss
-                if epoch % params['VALIDATION_FREQ'] == 0:
+                if epoch % params['VALIDATION_FREQ'] == 0 or epoch < 15:
                     net.test(X_val, y_val, test_loss)
                     Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(epoch, test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
                     net.test(X_test, y_test, test_loss)
