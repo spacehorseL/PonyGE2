@@ -4,7 +4,7 @@ from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network_processor import NetworkProcessor
-from utilities.fitness.network import ClassificationNet
+from utilities.fitness.network import Network, ClassificationNet
 from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
 from utilities.fitness.read_xy import DataReader
 from sklearn.model_selection import train_test_split, KFold
@@ -71,6 +71,7 @@ class cifar10(base_ff):
         Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
         processed_train = ImageProcessor.process_images(self.X_train, ind.tree.children[0], resize=self.resize)
         processed_test = ImageProcessor.process_images(self.X_test, ind.tree.children[0], resize=self.resize)
+        # TODO: Log image processing pipeline
 
         # Normalize image by channel
         if params['NORMALIZE']:
@@ -87,17 +88,19 @@ class cifar10(base_ff):
         ## Evolve network structure
         if params['EVOLVE_NETWORK']:
             Logger.log("Network Structure Selection Start: ")
-            flat_ind, kernel_size = NetworkProcessor.process_network(ind.tree.children[1], image.shape)
+            flat_ind, new_conv_layers = NetworkProcessor.process_network(ind.tree.children[1], image.shape, self.conv_layers)
+            conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
             Logger.log("\tIndividual: {}".format(flat_ind))
-            Logger.log("\tNew kernel size: {}".format(kernel_size))
-
-            new_conv_layers = []
-            for i, k in enumerate(self.conv_layers):
-                new_conv_layers.append((k[0], kernel_size[i], k[2], k[3], k[4]))
+            Logger.log("\tNew convolution layers: ")
+            for i, a, b in zip(range(len(new_conv_layers)), new_conv_layers, conv_outputs):
+                Logger.log("\tConv / output at layer {}: {}\t=> {}".format(i, a, b))
         else:
             new_conv_layers = self.conv_layers
 
-        net = ClassificationNet(self.fcn_layers, new_conv_layers)
+        # Modify fully connected input size
+        new_fcn_layers, conv_output = self.fcn_layers, conv_outputs[-1]
+        new_fcn_layers[0] = conv_output[0]*conv_output[1]*conv_output[2]
+        net = ClassificationNet(new_fcn_layers, new_conv_layers)
 
         train_loss, test_loss = stats('mse'), stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
@@ -107,8 +110,8 @@ class cifar10(base_ff):
 
         # Cross validation
         s_time = np.empty((kf.get_n_splits()))
-        validation_acc = np.empty((kf.get_n_splits()))
-        test_acc = np.empty((kf.get_n_splits()))
+        validation_acc, validation_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
+        test_acc, test_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
@@ -148,12 +151,12 @@ class cifar10(base_ff):
 
             # Validate model
             net.test(X_val, y_val, test_loss)
-            validation_acc[fold-1] = test_loss.getLoss('accuracy')
+            validation_acc[fold-1], validation_acc5[fold-1] = test_loss['accuracy'], test_loss['top5']
             Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
 
             # Test model
             net.test(processed_test, self.y_test, test_loss)
-            test_acc[fold-1] = test_loss.getLoss('accuracy')
+            test_acc[fold-1], test_acc5[fold-1] = test_loss['accuracy'], test_loss['top5']
             Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
 
             # Calculate time
@@ -165,8 +168,8 @@ class cifar10(base_ff):
         fitness = validation_acc.mean()
 
         for i in range(0, kf.get_n_splits()):
-            Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization accuracy (%): {:.4f} {:.4f}".format(i, kf.get_n_splits(), s_time[i]/60, validation_acc[i]*100, test_acc[i]*100))
-        Logger.log("STAT -- Mean Validation / Generatlization accuracy (%): {:.4f} {:.4f}".format(validation_acc.mean()*100, test_acc.mean()*100))
+            Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization accuracy & top5 (%): {:.4f} {:.4f} {:.4f} {:.4f}".format(i, kf.get_n_splits(), s_time[i]/60, validation_acc[i]*100, test_acc[i]*100, validation_acc5[i]*100, test_acc5[i]*100))
+        Logger.log("STAT -- Mean Validation / Generatlization accuracy & top5 (%): {:.4f} {:.4f} {:.4f} {:.4f}".format(validation_acc.mean()*100, test_acc.mean()*100, validation_acc5.mean()*100, test_acc5.mean()*100))
         # ind.net = net
         params['CURRENT_EVALUATION'] += 1
         return fitness

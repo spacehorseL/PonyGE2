@@ -23,9 +23,11 @@ class DataReader():
             for row in fnames:
                 fname = os.path.join(params['DATASET'], row[0])
                 img = cv.imread(fname) if os.path.isfile(fname) else print(fname+" does not exist")
+                img =  cv.resize(img, (80,80))
                 X = np.append(X, img)
                 Y = np.append(Y, int(row[1]))
-            Logger.log("Done reading dataset with {0} images...".format(len(X)), info=False)
+            X = X.reshape(tuple([-1]+list(img.shape)))
+            Logger.log("Done reading dataset with {0} images...".format(len(Y)), info=False)
         return X, Y
 
     def read_cifar(self):

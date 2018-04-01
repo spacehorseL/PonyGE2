@@ -31,12 +31,12 @@ PARENT_FILE:            local_params.txt
 ##                                ##
 ##          Network Setup         ##
 ##                                ##
-ACTIVATION:             ReLU 
+ACTIVATION:             Tanh 
 CONVOLUTION:            True
 NETWORK_MODEL:          ConvModel 
 CROSS_VALIDATION_SPLIT: 3
-TRAIN_FREQ:             10
-VALIDATION_FREQ:        50
+TRAIN_FREQ:             1
+VALIDATION_FREQ:        5
 NUM_EPOCHS:             3000 
 BATCH_SIZE:             300
 LEARNING_RATE:          0.1

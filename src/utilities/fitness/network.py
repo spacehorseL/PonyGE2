@@ -55,14 +55,19 @@ class Network():
             Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
 
     @classmethod
-    def assert_net(cls, conv_layers, fcn_layers, img_shape):
-        output = img_shape
+    def calc_conv_output(cls, conv_layers, img_shape):
+        output, sizes = img_shape, []
         for i, l in enumerate(conv_layers):
             output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
             factor = 1 if not pool else 2
             factor *= stride
             output = (output[0]//factor, output[1]//factor, output_channel)
-            Logger.log("Convolution output at layer {}: {}".format(i, output), info=False)
+            sizes.append(output)
+        return sizes
+
+    @classmethod
+    def assert_net(cls, conv_layers, fcn_layers, img_shape):
+        output = cls.calc_conv_output(conv_layers, img_shape)[-1]
         assert fcn_layers[0] == output[0]*output[1]*output[2]
         return output
 

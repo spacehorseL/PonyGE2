@@ -4,6 +4,7 @@ from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network import RegressionNet
+from utilities.fitness.read_xy import DataReader
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
@@ -19,7 +20,7 @@ class image_regression(base_ff):
         X, y = DataReader.read_data(params['DATASET_ID'])
 
         # Train & test split
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
         # Normalize label
         mean, std = np.mean(self.y_train), np.std(self.y_train)
