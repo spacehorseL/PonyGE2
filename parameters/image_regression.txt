@@ -22,4 +22,7 @@ CUDA_ENABLED:           False
 CROSS_VALIDATION_SPLIT: 3
 NUM_EPOCHS:             50
 PARENT_FILE:            local_params.txt
-DATASET:                2
+DATASET_ID:             2
+LEARNING_RATE:          0.00015
+MOMENTUM:               0.9
+ACTIVATION:             Tanh

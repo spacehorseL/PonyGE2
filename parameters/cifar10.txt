@@ -24,11 +24,13 @@ CUDA_ENABLED:           False
 CROSS_VALIDATION_SPLIT: 10
 NUM_EPOCHS:             10 
 BATCH_SIZE:             500
-DATASET:                5
+DATASET_ID:             5
 CONVOLUTION:            True
 TRAIN_FREQ:             2
 VALIDATION_FREQ:        2
 FCN_LAYERS:            [3072, 10]
+ACTIVATION:             ReLU
+CONV_LAYERS:            []
 NETWORK_MODEL:          AlexNetModel
 NORMALIZE:              True
 LEARNING_RATE:          0.00015

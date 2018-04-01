@@ -46,7 +46,7 @@ class Model(nn.Module):
             fcn["fcn"+str(l)] = linear
             if l != len(layers) - 1:
                 fcn["dp"+str(l)] = nn.Dropout(p=0.7)
-                fcn["reluf"+str(l)] = nn.ReLU(inplace=True)
+                fcn["reluf"+str(l)] = nn.Tanh() if params['ACTIVATION'] == 'Tanh' else nn.ReLU(inplace=True)
         return nn.Sequential(fcn)
 
     def reinitialize_params(self):
@@ -68,11 +68,11 @@ class Model(nn.Module):
         return self.model.modules()
 
 class FCNModel(Model):
-    def __init__(self, layers):
-        super(FCNModel, self).__init__(layers, [])
+    def __init__(self, fcn_layers):
+        super(FCNModel, self).__init__(fcn_layers, [])
 
     def forward(self, x):
-        x = x.view(-1, self.layers[0])
+        x = x.view(x.size(0), -1)
         x = self.fcn_layers(x)
         return x
 

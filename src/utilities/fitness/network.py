@@ -76,9 +76,9 @@ class Network():
         Logger.log("---------------------------------------------------", info=False)
 
 class RegressionNet(Network):
-    def __init__(self, layers, batch_size=32):
+    def __init__(self, fcn_layers, batch_size=32):
         super(RegressionNet, self).__init__(batch_size=batch_size)
-        self.model = FCNModel(layers)
+        self.model = FCNModel(fcn_layers)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
         self.log_model()
@@ -91,7 +91,7 @@ class RegressionNet(Network):
     def load_xy(self, x, y):
         return torch.from_numpy(x).float(), torch.from_numpy(y).float()
 
-    def calc_loss(self, output, y, loss_fcn, loss):
+    def calc_loss(self, output, y, loss_fcn, loss, print_confusion=False):
         o_sorted, o_idx = torch.sort(output.data.view(-1))
         y_sorted, y_idx = torch.sort(y.data)
         o_idx = o_idx.view_as(y_idx)
@@ -100,7 +100,7 @@ class RegressionNet(Network):
         loss['mse'] = loss_fcn.data[0]
         loss['mse_rnk'] = self.calc_msernk(diff)
         loss.setList('rankHist', diff.tolist())
-        return mse_rnk
+        return loss['mse_rnk']
 
 class ClassificationNet(Network):
     def __init__(self, fcn_layers, conv_layers):

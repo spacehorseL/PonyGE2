@@ -7,11 +7,11 @@ DEBUG:                  True
 DEBUG_NET:              False 
 VERBOSE:                True
 CUDA_ENABLED:           False
-DATASET:                5
+DATASET_ID:             2
 ##                                ##
 ##             GP Setup           ##
 ##                                ##
-GRAMMAR_FILE:           evo_image_proc.bnf
+GRAMMAR_FILE:           image_proc.bnf
 FITNESS_FUNCTION:       cifar10 
 INITIALISATION:         PI_grow
 INVALID_SELECTION:      False
@@ -31,7 +31,7 @@ PARENT_FILE:            local_params.txt
 ##                                ##
 ##          Network Setup         ##
 ##                                ##
-ACTIVATION:             ReLU
+ACTIVATION:             ReLU 
 CONVOLUTION:            True
 NETWORK_MODEL:          ConvModel 
 CROSS_VALIDATION_SPLIT: 3

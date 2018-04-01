@@ -283,8 +283,8 @@ def set_params(command_line_args, create_files=True):
     # NOTE that command line arguments overwrite all previously set parameters.
     params.update(cmd_args)
 
-    if isinstance(params['DATASET'], int) or not path.isfile(params['DATASET']):
-        params['DATASET'] = params['DATASET_'+str(params['DATASET'])]
+    if isinstance(params['DATASET_ID'], int) or not path.isfile(params['DATASET']):
+        params['DATASET'] = params['DATASET_'+str(params['DATASET_ID'])]
 
     if params['LOAD_STATE']:
         # Load run from state.

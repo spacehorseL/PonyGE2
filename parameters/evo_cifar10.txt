@@ -27,6 +27,7 @@ PARENT_FILE:            local_params.txt
 DATASET:                5
 CONVOLUTION:            True
 TRAIN_FREQ:             10
+ACTIVATION:             ReLU
 VALIDATION_FREQ:        50
 NETWORK_MODEL:          EvoConvModel 
 INPUT_CHANNEL:          3

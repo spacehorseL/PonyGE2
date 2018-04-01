@@ -6,6 +6,7 @@ from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network_processor import NetworkProcessor
 from utilities.fitness.network import ClassificationNet
 from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
+from utilities.fitness.read_xy import DataReader
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
@@ -21,19 +22,10 @@ class cifar10(base_ff):
         self.resize = params['RESIZE']
 
         # Read images from dataset
-        Logger.log("Reading images from {} ...".format(params['DATASET']), info=False)
-
-        X, Y = np.array([]), np.array([])
-        for num in range(1, 6):
-            datapath = os.path.join(params['DATASET'], 'data_batch_'+str(num))
-            x, y = read_cifar(datapath)
-            X = np.append(X, x)
-            Y = np.append(Y, y)
-        X = np.reshape(X, (-1, 32,32,3))
-        Logger.log("Done reading dataset with {} images...".format(len(X)), info=False)
+        X, y = DataReader.read_data(params['DATASET_ID'])
 
         # Train & test split
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
         # Check class balance between splits
         classes, class_balance_train, class_balance_test = check_class_balance(self.y_train, self.y_test)
