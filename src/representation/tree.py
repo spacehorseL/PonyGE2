@@ -237,15 +237,19 @@ class Tree:
 
         return genome, output, invalid, max_depth, nodes
 
-    def evaluate_tree(self):
+    def evaluate_tree(self, duplicate=None):
+        # Evaluate tree using a copy of the tree to avoid side effects
+        if isinstance(duplicate, type(None)):
+            duplicate = self.__copy__()
 
         evaluated = []
-        for i in range(1, len(self.children)):
-            if len(self.children[i].children) == 0:
-                self.children[i].children = [str(self.children[i])]
-            evaluated.append(self.children[i].evaluate_tree())
+        for i in range(1, len(duplicate.children)):
 
-        operator = re.sub(r'\(|\)|<.*>', '', str(self.children[0])).strip()
+            if len(duplicate.children[i].children) == 0:
+                duplicate.children[i].children = [str(duplicate.children[i])]
+            evaluated.append(duplicate.children[i].evaluate_tree(duplicate=duplicate.children[i]))
+
+        operator = re.sub(r'\(|\)|<.*>', '', str(duplicate.children[0])).strip()
 
         return ImageProcessor.process(operator, evaluated)
 

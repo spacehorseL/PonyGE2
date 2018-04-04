@@ -147,7 +147,8 @@ class cifar10(base_ff):
                         if (abs(latest_acc[:-1]) < epsilon).all() == True:
                             Logger.log("Early stopping at epoch {} (latest {} ckpts): {}".format(epoch, early_crit, " ".join(["{:.4f}".format(x) for x in early_stop[-early_crit:]])))
                             break
-                    early_ckpt = min(early_ckpt+300, early_ckpt*2)
+                    # early_ckpt = min(early_ckpt+300, early_ckpt*2)
+                    early_ckpt += params['VALIDATION_FREQ']
 
             # Validate model
             net.test(X_val, y_val, test_loss)
