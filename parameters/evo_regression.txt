@@ -7,10 +7,11 @@ DEBUG:                  True
 DEBUG_NET:              False 
 VERBOSE:                True
 CUDA_ENABLED:           False
-DATASET_ID:             5
+DATASET_ID:             2
 ##                                ##
 ##             GP Setup           ##
 ##                                ##
+MAXIMIZE:               False
 GRAMMAR_FILE:           evo_image_proc.bnf
 FITNESS_FUNCTION:       cifar10 
 INITIALISATION:         PI_grow
@@ -31,17 +32,18 @@ PARENT_FILE:            local_params.txt
 ##                                ##
 ##          Network Setup         ##
 ##                                ##
-ACTIVATION:             ReLU
+ACTIVATION:             Tanh 
 CONVOLUTION:            True
+NETWORK:                RegressionNet
 NETWORK_MODEL:          ConvModel 
 CROSS_VALIDATION_SPLIT: 3
 TRAIN_FREQ:             10
 VALIDATION_FREQ:        50
 NUM_EPOCHS:             300 
-BATCH_SIZE:             300
-LEARNING_RATE:          0.1
-MOMENTUM:               0.2
-FCN_LAYERS:             [256, 10]
+BATCH_SIZE:             32
+LEARNING_RATE:          0.00015
+MOMENTUM:               0.9
+FCN_LAYERS:             [4096, 4096, 1]
 CONV_LAYERS:            [(64, 11, None, 4, True), (192, 5, None, 1, True), (384, 3, None, 1, False), (256, 3, None, 1, False), (256, 3, None, 1, True)]
 AUGMENT_CHANNEL:        True
 ##                                ##
@@ -50,7 +52,8 @@ AUGMENT_CHANNEL:        True
 EVOLVE_NETWORK:         True
 RANDOM_SEED:            None
 RESIZE:                 None 
-NORMALIZE:              True
+NORMALIZE:              False
+NORMALIZE_LABEL:        True
 INPUT_CHANNEL:          3
 KERNEL_GROW_RATE:       2
 FILTER_GROW_RATE:       0.2

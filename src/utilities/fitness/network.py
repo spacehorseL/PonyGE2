@@ -1,5 +1,6 @@
 from algorithm.parameters import params
 from utilities.stats.logger import Logger
+from utilities.stats.individual_stat import stats
 from utilities.stats.network_visualizer import Visualizer
 import collections
 import numpy as np
@@ -16,11 +17,14 @@ class Network():
         if params['RANDOM_SEED']:
             torch.manual_seed(int(params['RANDOM_SEED']))
         self.batch_size = batch_size
+        self.measures = ['mse']
+        self.train_loss, self.test_loss = stats('mse'), stats('mse')
+        self.validation_log, self.test_log = [], []
 
     def reinitialize_params(self):
         self.model.reinitialize_params()
 
-    def train(self, epoch, x, y, loss):
+    def train(self, epoch, x, y):
         # Set model to training mode for Dropout and BatchNorm operations
         self.model.train()
         x, y = self.load_xy(x, y)
@@ -34,9 +38,10 @@ class Network():
         self.optimizer.zero_grad()
         loss_fcn.backward()
         self.optimizer.step()
-        loss.setLoss('mse', loss_fcn.data[0])
+        self.train_loss.setLoss('mse', loss_fcn.data[0])
 
-    def test(self, x, y, loss, print_confusion=False):
+
+    def test(self, x, y, print_confusion=False):
         self.model.eval()
         x, y = self.load_xy(x, y)
         if params['CUDA_ENABLED']:
@@ -46,7 +51,7 @@ class Network():
         output = self.model(x)
         loss_fcn = self.criterion(output, y)
 
-        return self.calc_loss(output, y, loss_fcn, loss, print_confusion=print_confusion)
+        return self.calc_loss(output, y, loss_fcn, self.test_loss, print_confusion=print_confusion)
 
     def visualize(self, layers, image_size, canvas_size):
         Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
@@ -80,12 +85,34 @@ class Network():
         Logger.log("\tNetwork structure = \n{}".format(self.model), info=False)
         Logger.log("---------------------------------------------------", info=False)
 
+    def get_test_loss(self):
+        return ([self.test_loss[m] for m in self.measures])
+
+    def get_test_loss_str(self):
+        loss = self.get_test_loss()
+        return " ".join(["{:.6f}".format(l) for l in loss])
+
+    def save_validation_loss(self):
+        self.validation_log += [np.array(self.get_test_loss())]
+
+    def save_test_loss(self):
+        self.test_log += [np.array(self.get_test_loss())]
+        print(self.test_log)
+
+    def get_validation_log(self):
+        return np.array(self.validation_log)
+
+    def get_test_log(self):
+        return np.array(self.test_log)
+
 class RegressionNet(Network):
-    def __init__(self, fcn_layers, batch_size=32):
+    def __init__(self, fcn_layers, conv_layers, batch_size=32):
         super(RegressionNet, self).__init__(batch_size=batch_size)
-        self.model = FCNModel(fcn_layers)
+        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
         self.criterion = F.mse_loss
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
+        self.measures = ['mse', 'mse_rnk']
+        self.train_loss, self.test_loss = stats('mse'), stats('mse_rnk')
         self.log_model()
 
     def calc_msernk(self, x, y=None):
@@ -107,12 +134,18 @@ class RegressionNet(Network):
         loss.setList('rankHist', diff.tolist())
         return loss['mse_rnk']
 
+    def get_fitness(self):
+        # return mean of mse_rnk (at index 1)
+        return np.array(self.validation_log).mean(axis=1)[1]
+
 class ClassificationNet(Network):
     def __init__(self, fcn_layers, conv_layers):
         super(ClassificationNet, self).__init__()
         self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
+        self.measures = ['nll', 'accuracy', 'top5']
+        self.train_loss, self.test_loss = stats('nll'), stats('accuracy')
         self.log_model()
 
     def load_xy(self, x, y):
@@ -142,12 +175,16 @@ class ClassificationNet(Network):
         return sum([a in b for a,b in zip(y.data, output.data.topk(k)[1])]) / len(output.data)
 
     def calc_loss(self, output, y, loss_fcn, loss, print_confusion=False):
-        loss['mse'] = loss_fcn.data[0]
+        loss['nll'] = loss_fcn.data[0]
         loss['accuracy'] = self.calc_accuracy(output, y)
         loss['top5'] = self.calc_topk(output, y, 5)
         # if print_confusion:
         #     self.print_confusion_matrix(pred, y.data, output.size()[1])
         return loss['accuracy']
+
+    def get_fitness(self):
+        # return mean of accuracy (at index 1)
+        return np.array(self.validation_log).mean(axis=1)[1]
 
 class EvoClassificationNet(ClassificationNet):
     def __init__(self, fcn_layers, conv_layers):

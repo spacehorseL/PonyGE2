@@ -4,7 +4,7 @@ from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network_processor import NetworkProcessor
-from utilities.fitness.network import Network, ClassificationNet
+from utilities.fitness.network import Network, RegressionNet, ClassificationNet
 from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
 from utilities.fitness.read_xy import DataReader
 from sklearn.model_selection import train_test_split, KFold
@@ -13,7 +13,7 @@ import numpy as np
 import os, csv, random, pickle, time
 
 class cifar10(base_ff):
-    maximise = True  # True as it ever was.
+    maximise = params['MAXIMIZE']  # True as it ever was.
     def __init__(self):
         # Initialise base fitness function class.
         super().__init__()
@@ -26,6 +26,14 @@ class cifar10(base_ff):
 
         # Train & test split
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+        if params['NORMALIZE_LABEL']:
+            Logger.log("Normalizing labels...")
+            print(self.y_train, self.y_test)
+            self.y_train, mean, std = ImageProcessor.normalize(self.y_train)
+            self.y_test, _, _ = ImageProcessor.normalize(self.y_test, mean=mean, std=std)
+            print(self.y_train, self.y_test)
+            Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
 
         # Check class balance between splits
         classes, class_balance_train, class_balance_test = check_class_balance(self.y_train, self.y_test)
@@ -46,6 +54,7 @@ class cifar10(base_ff):
         Logger.log("\tNumber of samples: \t{}".format(len(X)), info=False)
         Logger.log("\tTraining / Test split: \t{}/{}".format(len(self.X_train), len(self.X_test)), info=False)
         Logger.log("\tImage size: \t{}".format(self.X_train[0].shape), info=False)
+        Logger.log("\tNormalize label: \t{}".format(params['NORMALIZE_LABEL']), info=False)
         Logger.log("\tNormalize after preprocessing: \t{}".format(params['NORMALIZE']), info=False)
 
         Logger.log("---------------------------------------------------", info=False)
@@ -76,8 +85,8 @@ class cifar10(base_ff):
         # Normalize image by channel
         if params['NORMALIZE']:
             Logger.log("Normalizing processed images...")
-            processed_train, mean, std = ImageProcessor.normalize(processed_train)
-            processed_test, _, _ = ImageProcessor.normalize(processed_test, mean=mean, std=std)
+            processed_train, mean, std = ImageProcessor.normalize_img(processed_train)
+            processed_test, _, _ = ImageProcessor.normalize_img(processed_test, mean=mean, std=std)
             Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
 
         # Setup test images
@@ -100,9 +109,8 @@ class cifar10(base_ff):
         # Modify fully connected input size
         new_fcn_layers, conv_output = self.fcn_layers, conv_outputs[-1]
         new_fcn_layers[0] = conv_output[0]*conv_output[1]*conv_output[2]
-        net = ClassificationNet(new_fcn_layers, new_conv_layers)
+        net = eval(params['NETWORK'])(new_fcn_layers, new_conv_layers)
 
-        train_loss, test_loss = stats('mse'), stats('accuracy')
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         fitness, fold = 0, 1
 
@@ -110,8 +118,8 @@ class cifar10(base_ff):
 
         # Cross validation
         s_time = np.empty((kf.get_n_splits()))
-        validation_acc, validation_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
-        test_acc, test_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
+        # validation_acc, validation_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
+        # test_acc, test_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
@@ -124,22 +132,22 @@ class cifar10(base_ff):
             for epoch in range(1, params['NUM_EPOCHS'] + 1):
                 # mini-batch training
                 for x, y in data_train:
-                    net.train(epoch, x, y, train_loss)
+                    net.train(epoch, x, y)
 
                 # log training loss
                 if epoch % params['TRAIN_FREQ'] == 0:
-                    Logger.log("Epoch {} Training loss (NLL): {:.6f}".format(epoch, train_loss.getLoss('mse')))
+                    Logger.log("Epoch {} Training loss (NLL): {:.6f}".format(epoch, net.train_loss.getLoss()))
 
                 # log validation/test loss
                 if epoch % params['VALIDATION_FREQ'] == 0 or epoch < 15:
-                    net.test(X_val, y_val, test_loss)
-                    Logger.log("Epoch {} Validation loss (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(epoch, test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
-                    net.test(X_test, y_test, test_loss)
-                    Logger.log("Epoch {} Test loss (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(epoch, test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
+                    net.test(X_val, y_val)
+                    Logger.log("Epoch {} Validation loss (NLL/Accuracy): {}".format(epoch, net.get_test_loss_str()))
+                    net.test(X_test, y_test)
+                    Logger.log("Epoch {} Test loss (NLL/Accuracy): {}".format(epoch, net.get_test_loss_str()))
 
                 # check for early stop
                 if epoch == early_ckpt:
-                    accuracy = net.test(X_test, y_test, test_loss, print_confusion=True)
+                    accuracy = net.test(X_test, y_test, print_confusion=True)
                     early_stop.append(accuracy)
                     if len(early_stop) > 3:
                         latest_acc = early_stop[-early_crit:]
@@ -151,14 +159,14 @@ class cifar10(base_ff):
                     early_ckpt += params['VALIDATION_FREQ']
 
             # Validate model
-            net.test(X_val, y_val, test_loss)
-            validation_acc[fold-1], validation_acc5[fold-1] = test_loss['accuracy'], test_loss['top5']
-            Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
+            net.test(X_val, y_val)
+            net.save_validation_loss()
+            Logger.log("Cross Validation [Fold {}/{}] Validation (NLL/Accuracy): {}".format(fold, kf.get_n_splits(), net.get_test_loss_str()))
 
             # Test model
-            net.test(processed_test, self.y_test, test_loss)
-            test_acc[fold-1], test_acc5[fold-1] = test_loss['accuracy'], test_loss['top5']
-            Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {:.6f} {:.6f} {:6f}".format(fold, kf.get_n_splits(), test_loss['mse'], test_loss['accuracy'], test_loss['top5']))
+            net.test(processed_test, self.y_test)
+            net.save_test_loss()
+            Logger.log("Cross Validation [Fold {}/{}] Test (NLL/Accuracy): {}".format(fold, kf.get_n_splits(), net.get_test_loss_str()))
 
             # Calculate time
             s_time[fold-1] = time.time() - s_time[fold-1]
@@ -166,11 +174,16 @@ class cifar10(base_ff):
 
             fold = fold + 1
 
-        fitness = validation_acc.mean()
+        fitness = net.get_fitness()
 
-        for i in range(0, kf.get_n_splits()):
-            Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization accuracy & top5 (%): {:.4f} {:.4f} {:.4f} {:.4f}".format(i, kf.get_n_splits(), s_time[i]/60, validation_acc[i]*100, test_acc[i]*100, validation_acc5[i]*100, test_acc5[i]*100))
-        Logger.log("STAT -- Mean Validation / Generatlization accuracy & top5 (%): {:.4f} {:.4f} {:.4f} {:.4f}".format(validation_acc.mean()*100, test_acc.mean()*100, validation_acc5.mean()*100, test_acc5.mean()*100))
+        val_log, test_log = np.array(net.validation_log), np.array(net.test_log)
+        print(val_log, test_log)
+        val_mean, test_mean = val_log.mean(axis=1), test_log.mean(axis=1)
+        for i, (v, t) in enumerate(zip(val_log, test_log)):
+            print(i,v,t)
+            log = " ".join(["{:.4f} {:.4f}".format(v[idx], t[idx]) for idx in range(len(v))])
+            Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization: {}".format(i, kf.get_n_splits(), s_time[i]/60, log))
+        Logger.log("STAT -- Mean Validation / Generatlization: {}".format(" ".join(["{:.4f} {:.4f}".format(i, j) for i, j in zip(val_mean, test_mean)])))
         # ind.net = net
         params['CURRENT_EVALUATION'] += 1
         return fitness
