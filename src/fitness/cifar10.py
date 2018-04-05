@@ -98,13 +98,14 @@ class cifar10(base_ff):
         if params['EVOLVE_NETWORK']:
             Logger.log("Network Structure Selection Start: ")
             flat_ind, new_conv_layers = NetworkProcessor.process_network(ind.tree.children[1], image.shape, self.conv_layers)
-            conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
             Logger.log("\tIndividual: {}".format(flat_ind))
-            Logger.log("\tNew convolution layers: ")
-            for i, a, b in zip(range(len(new_conv_layers)), new_conv_layers, conv_outputs):
-                Logger.log("\tConv / output at layer {}: {}\t=> {}".format(i, a, b))
         else:
             new_conv_layers = self.conv_layers
+
+        conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
+        Logger.log("\tNew convolution layers: ")
+        for i, a, b in zip(range(len(new_conv_layers)), new_conv_layers, conv_outputs):
+            Logger.log("\tConv / output at layer {}: {}\t=> {}".format(i, a, b))
 
         # Modify fully connected input size
         new_fcn_layers, conv_output = self.fcn_layers, conv_outputs[-1]
@@ -118,8 +119,6 @@ class cifar10(base_ff):
 
         # Cross validation
         s_time = np.empty((kf.get_n_splits()))
-        # validation_acc, validation_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
-        # test_acc, test_acc5 = np.empty((kf.get_n_splits())), np.empty((kf.get_n_splits()))
         for train_index, val_index in kf.split(processed_train):
             X_train, X_val = processed_train[train_index], processed_train[val_index]
             y_train, y_val = self.y_train[train_index], self.y_train[val_index]
@@ -177,7 +176,6 @@ class cifar10(base_ff):
         fitness = net.get_fitness()
 
         val_log, test_log = np.array(net.validation_log), np.array(net.test_log)
-        print(val_log, test_log)
         val_mean, test_mean = val_log.mean(axis=1), test_log.mean(axis=1)
         for i, (v, t) in enumerate(zip(val_log, test_log)):
             print(i,v,t)

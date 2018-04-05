@@ -24,15 +24,15 @@ class Model(nn.Module):
                 self.fcn_layers = nn.DataParallel(self.fcn_layers).cuda()
 
     def set_conv(self, conv_layers):
-        # (output, kernel, padding, stride, pool?)
+        # (output, kernel, padding, stride, pool?, name)
         conv = collections.OrderedDict()
         for idx, l in enumerate(conv_layers):
             input_channel = conv_layers[idx-1][0] if idx > 0 else params['INPUT_CHANNEL']
             output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
             padding = l[2] if l[2] != None else kernel // 2
 
-            conv['conv'+str(idx)] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
-            nn.init.xavier_uniform(conv['conv'+str(idx)].weight, gain=np.sqrt(2))
+            conv[l[5]] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
+            nn.init.xavier_uniform(conv[l[5]].weight, gain=np.sqrt(2))
             conv['relu'+str(idx)] = nn.ReLU(inplace=True)
             if pool:
                 conv['pool'+str(idx)] = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -89,27 +89,27 @@ class ConvModel(Model):
 
 class Conv2Model(ConvModel):
     def __init__(self, fcn_layers=[256, 10], conv_layers=[]):
-        conv_layers = [(64, 3, None, 1, True), (256, 3, None, 1, True)]
+        conv_layers = [(64, 3, None, 1, True, 'conv1'), (256, 3, None, 1, True, 'conv2')]
         super(Conv2Model, self).__init__(fcn_layers, conv_layers)
 
 class AlexNetModel(ConvModel):
     def __init__(self, fcn_layers=[256, 10], conv_layers=[]):
         conv_layers = [
-            (64, 11, None, 4, True),
-            (192, 5, None, 1, True),
-            (384, 3, None, 1, False),
-            (256, 3, None, 1, False),
-            (256, 3, None, 1, True)
+            (64, 11, None, 4, True, 'alex1'),
+            (192, 5, None, 1, True, 'alex2'),
+            (384, 3, None, 1, False, 'alex3'),
+            (256, 3, None, 1, False, 'alex4'),
+            (256, 3, None, 1, True, 'alex5')
         ]
         super(AlexNetModel, self).__init__(fcn_layers, conv_layers)
 
 class AlexNetModel2(ConvModel):
     def __init__(self, fcn_layers=[320, 10], conv_layers=[]):
         conv_layers = [
-            (80, 11, None, 4, True),
-            (240, 5, None, 1, True),
-            (480, 3, None, 1, False),
-            (320, 3, None, 1, False),
-            (320, 3, None, 1, True)
+            (80, 11, None, 4, True, 'alex1b'),
+            (240, 5, None, 1, True, 'alex2b'),
+            (480, 3, None, 1, False, 'alex3b'),
+            (320, 3, None, 1, False, 'alex4b'),
+            (320, 3, None, 1, True, 'alex5b')
         ]
         super(AlexNetModel2, self).__init__(fcn_layers, conv_layers)

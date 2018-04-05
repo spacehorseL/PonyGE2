@@ -17,7 +17,7 @@ class NetworkProcessor:
         cleaned_instance = [instance[split[i-1]:split[i]] for i, t in enumerate(split) if i > 0] + instance[split[-1]:]
 
         cls.processed, j = [], 0
-        for i in cleaned_instance:
+        for idx, i in enumerate(cleaned_instance):
             if 'fixedlayer' in i:
                 # Append fixed layer (pre-defined layers)
                 cls.processed.append(fixed[j])
@@ -25,18 +25,18 @@ class NetworkProcessor:
             elif 'onebyonelayer' in i:
                 # Changes only output size => used to reduce/increase dimensionality
                 output_channel = cls.process(i[1], None)
-                cls.processed.append((output_channel, 1, 0, 1, False))
+                cls.processed.append((output_channel, 1, 0, 1, False, 'obo'+str(idx)))
             elif 'scalinglayer' in i:
                 # Changes nothing => used to simulate a missing layer
                 output_channel = cls.process('same_o', None)
-                cls.processed.append((output_channel, 1, 0, 1, False))
+                cls.processed.append((output_channel, 1, 0, 1, False, 'scale'+str(idx)))
             else:
                 # Cleaned instance: 'layer', 'output', 'kernel'
                 # Layer definition: (output, kernel, padding, stride, pooling?)
                 output_channel = cls.process(i[1], None)
                 kernel_size = cls.process(i[2], None)
                 padding, stride, pool = kernel_size // 2, 1, False
-                cls.processed.append((output_channel, kernel_size, padding, stride, pool))
+                cls.processed.append((output_channel, kernel_size, padding, stride, pool, 'add'+str(idx)))
         return cleaned_instance, cls.processed
 
     @classmethod
