@@ -192,3 +192,45 @@ class EvoClassificationNet(ClassificationNet):
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
         self.log_model()
+
+class EvoPretrainedClassificationNet(ClassificationNet):
+    def __init__(self, pretrained_model_file, pretrained_fcn_layers, pretrained_conv_layers, conv_layers_increments):
+        # conv_layers_increments[0] should be zero if the number of input channels is constant
+        super(EvoPretrainedClassificationNet, self).__init__()
+        
+        # Assume convolution then FCN architecture
+        prenet = ClassificationNet(pretrained_fcn_layers, pretrained_conv_layers)
+        prenet.model.load_state_dict(torch.load(pretrained_model_file))
+        assert all([p1 >= 0 for p1 in conv_layers_increments]), 'At least one value in conv_layers_increments is less than 0.'
+        
+        # Write the configuration of the upgraded network
+        # Increment the convolution layers according to the conv_layers_increments (wrapped around)
+        l = len(conv_layers_increments)
+        upgraded_conv_layers = [(p1+conv_layers_increments[i % l],p2,p3,p4,p5) for i,p1,p2,p3,p4,p5 in enumerate(pretrained_conv_layers)]
+        upgraded_fcn_layers = list(pretrained_fcn_layers) #Copy
+        upgraded_fcn_layers[0] = conv_layers_increments[-1][0]
+
+        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=upgraded_fcn_layers, conv_layers=upgraded_conv_layers)
+
+        # Transfer the weights
+        prenet_m = iter(prenet.model.modules())
+        for m in self.model.modules():
+            if isinstance(m, nn.Conv2d):
+                #m.weight.data.fill_(0) #debug
+                nn.init.xavier_uniform(m.weight, gain=np.sqrt(2))
+                m.weight.data[:prenet_m.weight.data.shape[0],:prenet_m.weight.data.shape[1],:,:] = prenet_m.weight.data
+                # Assume bias is True
+                #m.bias.data.fill_(0) #debug
+                nn.init.xavier_uniform(m.bias, gain=np.sqrt(2))
+                m.bias.data[:prenet_m.bias.data.shape[0]] = prenet_m.bias.data
+            elif isinstance(m, nn.Linear):
+                #m.weight.data.fill_(0)
+                nn.init.xavier_uniform(m.weight, gain=np.sqrt(2))
+                m.weight.data[:prenet_m.weight.data.shape[0],:prenet_m.weight.data.shape[1]] = prenet_m.weight.data
+                # Assume bias is True
+                #m.bias.data.fill_(0)
+                nn.init.xavier_uniform(m.bias, gain=np.sqrt(2))
+                m.bias.data[:prenet_m.bias.data.shape[0]] = prenet_m.bias.data
+            next(prenet_m)
+        
+        self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
