@@ -4,13 +4,13 @@ from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.fitness.image_processor import ImageProcessor
 from utilities.fitness.network_processor import NetworkProcessor
-from utilities.fitness.network import Network, RegressionNet, ClassificationNet
 from utilities.fitness.preprocess import DataIterator, check_class_balance, read_cifar
 from utilities.fitness.read_xy import DataReader
+from utilities.fitness.network import *
 from sklearn.model_selection import train_test_split, KFold
 import cv2 as cv
 import numpy as np
-import os, csv, random, pickle, time
+import os, csv, random, pickle, time, copy
 
 class cifar10(base_ff):
     maximise = params['MAXIMIZE']  # True as it ever was.
@@ -29,10 +29,8 @@ class cifar10(base_ff):
 
         if params['NORMALIZE_LABEL']:
             Logger.log("Normalizing labels...")
-            print(self.y_train, self.y_test)
             self.y_train, mean, std = ImageProcessor.normalize(self.y_train)
             self.y_test, _, _ = ImageProcessor.normalize(self.y_test, mean=mean, std=std)
-            print(self.y_train, self.y_test)
             Logger.log("Mean / Std of training set (by channel): {} / {}".format(mean, std))
 
         # Check class balance between splits
@@ -75,12 +73,12 @@ class cifar10(base_ff):
 
         genome, output, invalid, max_depth, nodes = ind.tree.get_tree_info(params['BNF_GRAMMAR'].non_terminals.keys(),[], [])
         Logger.log("Depth: {0}\tGenome: {1}".format(max_depth, genome))
+        ind.tree.print_tree()
 
         ## Evolve image preprocessor
         Logger.log("Processing Pipeline Start: {} images...".format(len(self.X_train)+len(self.X_test)))
         processed_train = ImageProcessor.process_images(self.X_train, ind.tree.children[0], resize=self.resize)
         processed_test = ImageProcessor.process_images(self.X_test, ind.tree.children[0], resize=self.resize)
-        # TODO: Log image processing pipeline
 
         # Normalize image by channel
         if params['NORMALIZE']:
@@ -97,10 +95,10 @@ class cifar10(base_ff):
         ## Evolve network structure
         if params['EVOLVE_NETWORK']:
             Logger.log("Network Structure Selection Start: ")
-            flat_ind, new_conv_layers = NetworkProcessor.process_network(ind.tree.children[1], image.shape, self.conv_layers)
+            flat_ind, new_conv_layers = NetworkProcessor.process_network(ind.tree.children[1], image.shape, copy.deepcopy(self.conv_layers))
             Logger.log("\tIndividual: {}".format(flat_ind))
         else:
-            new_conv_layers = self.conv_layers
+            new_conv_layers = copy.deepcopy(self.conv_layers)
 
         conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
         Logger.log("\tNew convolution layers: ")
@@ -108,7 +106,7 @@ class cifar10(base_ff):
             Logger.log("\tConv / output at layer {}: {}\t=> {}".format(i, a, b))
 
         # Modify fully connected input size
-        new_fcn_layers, conv_output = self.fcn_layers, conv_outputs[-1]
+        new_fcn_layers, conv_output = copy.deepcopy(self.fcn_layers), conv_outputs[-1]
         new_fcn_layers[0] = conv_output[0]*conv_output[1]*conv_output[2]
         net = eval(params['NETWORK'])(new_fcn_layers, new_conv_layers)
 
@@ -176,9 +174,8 @@ class cifar10(base_ff):
         fitness = net.get_fitness()
 
         val_log, test_log = np.array(net.validation_log), np.array(net.test_log)
-        val_mean, test_mean = val_log.mean(axis=1), test_log.mean(axis=1)
+        val_mean, test_mean = val_log.mean(axis=0), test_log.mean(axis=0)
         for i, (v, t) in enumerate(zip(val_log, test_log)):
-            print(i,v,t)
             log = " ".join(["{:.4f} {:.4f}".format(v[idx], t[idx]) for idx in range(len(v))])
             Logger.log("STAT -- Model[{}/{}] #{:.3f}m Validation / Generalization: {}".format(i, kf.get_n_splits(), s_time[i]/60, log))
         Logger.log("STAT -- Mean Validation / Generatlization: {}".format(" ".join(["{:.4f} {:.4f}".format(i, j) for i, j in zip(val_mean, test_mean)])))

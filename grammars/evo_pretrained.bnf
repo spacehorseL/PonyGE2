@@ -1,0 +1,54 @@
+<start> ::= <image_proc><evo_channel>
+<image_proc> ::= merge<ch1><ch2><ch3>
+<evo_channel> ::= <fixedlayer><fixedlayer><fixedlayer><fixedlayer><fixedlayer>
+<fixedlayer> ::= fixedlayer<inc>
+<inc> ::= inc0 | inc3 | inc4 | inc5 | inc6 | inc7 | inc8
+<evo_layer> ::= fixedlayer<hidden_a><hidden_a><hidden_b><hidden_b>
+<hidden_a> ::= layer<outsize><kernel_a><hidden_a>
+        | onebyonelayer<outsize><hidden_a>
+        | scalinglayer<hidden_a>
+        | fixedlayer
+<hidden_b> ::= layer<outsize><kernel_b><hidden_b>
+        | onebyonelayer<outsize><hidden_b>
+        | scalinglayer<hidden_b>
+        | fixedlayer
+<hidden> ::= layer<kernel><hidden>
+        | layer<kernel><hidden>
+        | layer
+<kernel> ::= grow_k | shrink_k | same_k | random_k
+<kernel_a> ::= grow_k | shrink_k | same_k | random_k
+<kernel_b> ::= shrink_k | same_k
+<outsize> ::= grow_o | shrink_o | same_o
+<ch0> ::= channel<imgx>0
+<ch1> ::= channel<imgx>1
+<ch2> ::= channel<imgx>2
+<ch3> ::= channel<imgx>3
+<ch4> ::= channel<imgx>4
+<ch5> ::= channel<imgx>5
+<ch6> ::= channel<imgx>6
+<op1> ::= contrast<ch0>
+<op2> ::= canny<ch0><ERC1><ERC2>
+<op3> ::= filter<ch0><ERC0><ERC2>
+<op4> ::= noise2D<ch0><ERC0>
+<op5> ::= threshold<ch0><ERC1><ERC3>
+<op6> ::= adaptiveThreshold<ch0><ERC3><ERC0><ERC1>
+<op7> ::= medianFilter<ch0><ERC0>
+<op8> ::= channel<m_op1>0
+<op9> ::= channel<m_op2>0
+<m_op1> ::= meanShiftFilter<imgx><ERC0><ERC1>
+<m_op2> ::= gammaCorrection<imgx><ERC2>
+<imgx> ::= imgx
+<op> ::= channel<m_op><ERC3>
+       | contrast<op>
+       | noise2D<op><ERC0>
+       | canny<op><ERC1><ERC2>
+       | filter<op><ERC0><ERC2>
+       | threshold<op><ERC1><ERC3>
+       | adaptiveThreshold<op><ERC3><ERC0><ERC1>
+<m_op> ::= meanShiftFilter<m_op><ERC0><ERC1>
+       | gammaCorrection<m_op><ERC2>
+       | imgx
+<ERC0> ::= partOfImageERC
+<ERC1> ::= intensityERC
+<ERC2> ::= scaleERC
+<ERC3> ::= randomERC

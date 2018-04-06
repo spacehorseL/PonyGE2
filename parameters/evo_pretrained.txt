@@ -1,0 +1,63 @@
+##                                ##
+##           System Setup         ##
+##                                ##
+CACHE:                  True
+CODON_SIZE:             100
+DEBUG:                  True 
+DEBUG_NET:              False 
+VERBOSE:                True
+CUDA_ENABLED:           False
+DATASET_ID:             5
+##                                ##
+##             GP Setup           ##
+##                                ##
+MAXIMIZE:               False
+GRAMMAR_FILE:           evo_pretrained.bnf
+FITNESS_FUNCTION:       cifar10 
+INITIALISATION:         PI_grow
+INVALID_SELECTION:      False
+REPLACEMENT:            generational
+SELECTION:              tournament
+MUTATION:               int_flip_per_codon
+CROSSOVER:              variable_onepoint
+CROSSOVER_PROBABILITY:  0.75
+TOURNAMENT_SIZE:        4 
+MAX_GENOME_LENGTH:      500
+GENERATIONS:            10
+POPULATION_SIZE:        15
+MIN_INIT_TREE_DEPTH:    4
+MAX_INIT_TREE_DEPTH:    12
+MAX_TREE_DEPTH:         18
+PARENT_FILE:            local_params.txt
+##                                ##
+##          Network Setup         ##
+##                                ##
+ACTIVATION:             ReLU
+CONVOLUTION:            True
+NETWORK:                EvoPretrainedClassificationNet 
+NETWORK_MODEL:          ConvModel 
+CROSS_VALIDATION_SPLIT: 3
+TRAIN_FREQ:             10
+VALIDATION_FREQ:        50
+NUM_EPOCHS:             300 
+BATCH_SIZE:             300
+LEARNING_RATE:          0.1
+MOMENTUM:               0.2
+FCN_LAYERS:             [256, 10]
+# CONV_LAYERS:            [(64,3,None, 4, True), (32,3, None, 1, True)]
+CONV_LAYERS:            [(64, 11, None, 4, True, 'alex1'), (192, 5, None, 1, True, 'alex2'), (384, 3, None, 1, False, 'alex3'), (256, 3, None, 1, False, 'alex4'), (256, 3, None, 1, True, 'alex5')]
+PRETRAINED_MODEL:       pretrained/alex60.pkl
+AUGMENT_CHANNEL:        True
+##                                ##
+##     Preprocess / Early Stop    ##
+##                                ##
+EVOLVE_NETWORK:         True
+RANDOM_SEED:            None
+RESIZE:                 None 
+NORMALIZE:              True
+NORMALIZE_LABEL:        False
+INPUT_CHANNEL:          3
+KERNEL_GROW_RATE:       2
+FILTER_GROW_RATE:       0.2
+EARLY_STOP_FREQ:        3
+EARLY_STOP_EPSILON:     0.003

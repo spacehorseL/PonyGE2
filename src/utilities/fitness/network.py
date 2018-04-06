@@ -2,7 +2,7 @@ from algorithm.parameters import params
 from utilities.stats.logger import Logger
 from utilities.stats.individual_stat import stats
 from utilities.stats.network_visualizer import Visualizer
-import collections
+import collections, os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -11,6 +11,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from utilities.fitness.models.plain_nets import *
 from utilities.fitness.models.res_nets import *
+global prenet, theirnet
 
 class Network():
     def __init__(self, batch_size=32):
@@ -136,7 +137,7 @@ class RegressionNet(Network):
 
     def get_fitness(self):
         # return mean of mse_rnk (at index 1)
-        return np.array(self.validation_log).mean(axis=1)[1]
+        return np.array(self.validation_log).mean(axis=0)[1]
 
 class ClassificationNet(Network):
     def __init__(self, fcn_layers, conv_layers):
@@ -184,7 +185,7 @@ class ClassificationNet(Network):
 
     def get_fitness(self):
         # return mean of accuracy (at index 1)
-        return np.array(self.validation_log).mean(axis=1)[1]
+        return np.array(self.validation_log).mean(axis=0)[1]
 
 class EvoClassificationNet(ClassificationNet):
     def __init__(self, fcn_layers, conv_layers):
@@ -194,43 +195,49 @@ class EvoClassificationNet(ClassificationNet):
         self.log_model()
 
 class EvoPretrainedClassificationNet(ClassificationNet):
-    def __init__(self, pretrained_model_file, pretrained_fcn_layers, pretrained_conv_layers, conv_layers_increments):
-        # conv_layers_increments[0] should be zero if the number of input channels is constant
-        super(EvoPretrainedClassificationNet, self).__init__()
-        
-        # Assume convolution then FCN architecture
-        prenet = ClassificationNet(pretrained_fcn_layers, pretrained_conv_layers)
-        prenet.model.load_state_dict(torch.load(pretrained_model_file))
-        assert all([p1 >= 0 for p1 in conv_layers_increments]), 'At least one value in conv_layers_increments is less than 0.'
-        
-        # Write the configuration of the upgraded network
-        # Increment the convolution layers according to the conv_layers_increments (wrapped around)
-        l = len(conv_layers_increments)
-        upgraded_conv_layers = [(p1+conv_layers_increments[i % l],p2,p3,p4,p5) for i,p1,p2,p3,p4,p5 in enumerate(pretrained_conv_layers)]
-        upgraded_fcn_layers = list(pretrained_fcn_layers) #Copy
-        upgraded_fcn_layers[0] = conv_layers_increments[-1][0]
+    def __init__(self, fcn_layers, conv_layers):
+        super(EvoPretrainedClassificationNet, self).__init__(fcn_layers, conv_layers)
 
-        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=upgraded_fcn_layers, conv_layers=upgraded_conv_layers)
+        pretrained_model_path = params['PRETRAINED_MODEL']
+        prenet = ClassificationNet(params['FCN_LAYERS'], params['CONV_LAYERS'])
+        if not os.path.isfile(pretrained_model_path):
+            Logger.log("Training Pretrained Network: ")
+            torch.save(prenet.model.state_dict(), pretrained_model_path)
+        prenet.model.load_state_dict(torch.load(pretrained_model_path))
 
         # Transfer the weights
-        prenet_m = iter(prenet.model.modules())
-        for m in self.model.modules():
-            if isinstance(m, nn.Conv2d):
-                #m.weight.data.fill_(0) #debug
-                nn.init.xavier_uniform(m.weight, gain=np.sqrt(2))
-                m.weight.data[:prenet_m.weight.data.shape[0],:prenet_m.weight.data.shape[1],:,:] = prenet_m.weight.data
-                # Assume bias is True
-                #m.bias.data.fill_(0) #debug
-                nn.init.xavier_uniform(m.bias, gain=np.sqrt(2))
-                m.bias.data[:prenet_m.bias.data.shape[0]] = prenet_m.bias.data
-            elif isinstance(m, nn.Linear):
-                #m.weight.data.fill_(0)
-                nn.init.xavier_uniform(m.weight, gain=np.sqrt(2))
-                m.weight.data[:prenet_m.weight.data.shape[0],:prenet_m.weight.data.shape[1]] = prenet_m.weight.data
-                # Assume bias is True
-                #m.bias.data.fill_(0)
-                nn.init.xavier_uniform(m.bias, gain=np.sqrt(2))
-                m.bias.data[:prenet_m.bias.data.shape[0]] = prenet_m.bias.data
-            next(prenet_m)
-        
+        prenet_m = iter(prenet.model.named_parameters())
+        p_name, p_params = next(prenet_m)
+
+        Logger.log('Transfer parameters start...')
+
+        self.model = ConvModel(fcn_layers=fcn_layers, conv_layers=conv_layers)
+
+        for q_name, q_params in self.model.named_parameters():
+            if p_name == q_name:
+                Logger.log('Set parameters: {}'.format(p_name))
+                # Skip initialize if 1D bias
+                if p_name.find('bias') < 0:
+                    nn.init.xavier_uniform(q_params, gain=np.sqrt(2))
+                # Set extra parameters to zero for debugging
+                if params['DEBUG_NET']:
+                    q_params.data.fill_(0)
+
+                # Transfer convolution params
+                print(p_params.data.shape[0])
+                if p_name.find('conv') > 0:
+                    q_params.data[:p_params.data.shape[0],:,:,:] = p_params.data
+                # Transfer fully connected params
+                if p_name.find('fcn') > 0:
+                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
+                # Transfer bias params
+                if p_name.find('bias') > 0:
+                    q_params.data[:p_params.data.shape[0]] = p_params.data
+
+                # Set to next layer of pretrained
+                try:
+                    p_name, p_params = next(prenet_m)
+                except StopIteration:
+                    break
+
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])

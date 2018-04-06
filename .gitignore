@@ -15,5 +15,6 @@ run.sh
 batch.sh
 local_params.txt
 ps.master
+pretrained
 
 !logger.py

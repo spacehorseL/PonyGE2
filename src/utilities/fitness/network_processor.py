@@ -1,4 +1,4 @@
-import random
+import random, re
 import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
@@ -12,15 +12,18 @@ class NetworkProcessor:
         # Obtain sequence of terminals
         instance = tree.get_terminals([])
         # Define split points (the first element is 'fixedlayer')
-        split = [i for i, v in enumerate(instance) if v in ['layer', 'onebyonelayer', 'scalinglayer', 'fixedlayer']]
+        split = [i for i, v in enumerate(instance) if v in ['layer', 'onebyonelayer', 'scalinglayer', 'fixedlayer']] + [None]
         # Split list into sublists, each sublist represent one layer
-        cleaned_instance = [instance[split[i-1]:split[i]] for i, t in enumerate(split) if i > 0] + instance[split[-1]:]
+        cleaned_instance = [instance[split[i-1]:split[i]] for i, t in enumerate(split) if i > 0]
 
         cls.processed, j = [], 0
         for idx, i in enumerate(cleaned_instance):
             if 'fixedlayer' in i:
+                # Find digits in inc'N'
+                output, kernel, padding, stride, pool, name = fixed[j]
+                output += cls.process('inc_c', [re.findall(r'\d+\d*', i[1])[0]])
                 # Append fixed layer (pre-defined layers)
-                cls.processed.append(fixed[j])
+                cls.processed.append((output, kernel, padding, stride, pool, name))
                 j+=1
             elif 'onebyonelayer' in i:
                 # Changes only output size => used to reduce/increase dimensionality
@@ -63,3 +66,7 @@ class NetworkProcessor:
 
     def same_o(self, args):
         return self.processed[-1][0]
+
+    def inc_c(self, args):
+        increment = int(args[0])
+        return 2**increment if increment > 0 else 0
