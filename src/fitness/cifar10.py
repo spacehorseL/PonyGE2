@@ -110,6 +110,11 @@ class cifar10(base_ff):
         new_fcn_layers[0] = conv_output[0]*conv_output[1]*conv_output[2]
         net = eval(params['NETWORK'])(new_fcn_layers, new_conv_layers)
 
+        if params['PRETRAIN']:
+            Logger.log("Using pretrained model at {}".format(params['PRETRAINED_MODEL']))
+            net.test(X_test, y_test)
+            Logger.log("Pretrained initial scores: {}".format(net.get_test_loss_str()))
+
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         fitness, fold = 0, 1
 
@@ -154,7 +159,7 @@ class cifar10(base_ff):
                             break
                     # early_ckpt = min(early_ckpt+300, early_ckpt*2)
                     early_ckpt += params['VALIDATION_FREQ']
-
+		
             # Validate model
             net.test(X_val, y_val)
             net.save_validation_loss()
@@ -168,7 +173,7 @@ class cifar10(base_ff):
             # Calculate time
             s_time[fold-1] = time.time() - s_time[fold-1]
             Logger.log("Cross Validation [Fold {}/{}] Training Time (m / m per epoch): {:.3f} {:.3f}".format(fold, kf.get_n_splits(), s_time[fold-1]/60, s_time[fold-1]/60/epoch))
-
+            
             fold = fold + 1
 
         fitness = net.get_fitness()

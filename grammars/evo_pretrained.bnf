@@ -2,6 +2,7 @@
 <image_proc> ::= merge<ch1><ch2><ch3>
 <evo_channel> ::= <fixedlayer><fixedlayer><fixedlayer><fixedlayer><fixedlayer>
 <fixedlayer> ::= fixedlayer<inc>
+#<inc> ::= inc0
 <inc> ::= inc0 | inc3 | inc4 | inc5 | inc6 | inc7 | inc8
 <evo_layer> ::= fixedlayer<hidden_a><hidden_a><hidden_b><hidden_b>
 <hidden_a> ::= layer<outsize><kernel_a><hidden_a>

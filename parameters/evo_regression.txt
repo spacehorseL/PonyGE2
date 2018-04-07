@@ -44,7 +44,8 @@ BATCH_SIZE:             32
 LEARNING_RATE:          0.00015
 MOMENTUM:               0.9
 FCN_LAYERS:             [4096, 4096, 1]
-CONV_LAYERS:            [(64, 11, None, 4, True, 'alex1'), (192, 5, None, 1, True, 'alex2'), (384, 3, None, 1, False, 'alex3'), (256, 3, None, 1, False, 'alex4'), (256, 3, None, 1, True, 'alex5')] 
+CONV_LAYERS:            [(64, 11, None, 4, True, 'alex1'), (256, 3, None, 1, False, 'alex4')] 
+# CONV_LAYERS:            [(64, 11, None, 4, True, 'alex1'), (192, 5, None, 1, True, 'alex2'), (384, 3, None, 1, False, 'alex3'), (256, 3, None, 1, False, 'alex4'), (256, 3, None, 1, True, 'alex5')] 
 AUGMENT_CHANNEL:        True
 ##                                ##
 ##     Preprocess / Early Stop    ##

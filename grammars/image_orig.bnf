@@ -1,1 +1,3 @@
-<start> ::= imgx_orig
+<start> ::= <image_proc><evo_layer>
+<image_proc> ::= imgx_orig
+<evo_layer> ::= fixedlayer

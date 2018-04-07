@@ -98,7 +98,6 @@ class Network():
 
     def save_test_loss(self):
         self.test_log += [np.array(self.get_test_loss())]
-        print(self.test_log)
 
     def get_validation_log(self):
         return np.array(self.validation_log)
@@ -168,8 +167,8 @@ class ClassificationNet(Network):
 
     def calc_accuracy(self, output, y):
         # get the index of the max log-probability
-        pred = output.data.max(1, keepdim=True)[1]
-        return pred.eq(y.data.view_as(pred)).cpu().sum() / len(output.data)
+        # pred = output.data.max(1, keepdim=True)[1]
+        return self.calc_topk(output, y, 1)
 
     def calc_topk(self, output, y, k):
         # topk(): returns tuple (values, indices)
@@ -205,13 +204,13 @@ class EvoPretrainedClassificationNet(ClassificationNet):
             torch.save(prenet.model.state_dict(), pretrained_model_path)
         prenet.model.load_state_dict(torch.load(pretrained_model_path))
 
-        # Transfer the weights
-        prenet_m = iter(prenet.model.named_parameters())
-        p_name, p_params = next(prenet_m)
+        self.model = ConvModel(fcn_layers=fcn_layers, conv_layers=conv_layers)
 
         Logger.log('Transfer parameters start...')
 
-        self.model = ConvModel(fcn_layers=fcn_layers, conv_layers=conv_layers)
+        # Transfer the weights
+        prenet_m = iter(prenet.model.named_parameters())
+        p_name, p_params = next(prenet_m)
 
         for q_name, q_params in self.model.named_parameters():
             if p_name == q_name:
@@ -223,16 +222,19 @@ class EvoPretrainedClassificationNet(ClassificationNet):
                 if params['DEBUG_NET']:
                     q_params.data.fill_(0)
 
+                patch = q_params.clone()
                 # Transfer convolution params
-                print(p_params.data.shape[0])
-                if p_name.find('conv') > 0:
-                    q_params.data[:p_params.data.shape[0],:,:,:] = p_params.data
+                if p_name.find('conv') >= 0 and p_name.find('weight') >= 0:
+                    patch[:p_params.data.shape[0],:p_params.data.shape[1],:,:] = p_params
                 # Transfer fully connected params
-                if p_name.find('fcn') > 0:
-                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
+                if p_name.find('fcn') >= 0 and p_name.find('weight') >= 0:
+                    patch[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
                 # Transfer bias params
-                if p_name.find('bias') > 0:
-                    q_params.data[:p_params.data.shape[0]] = p_params.data
+                if p_name.find('bias') >= 0:
+                    patch[:p_params.data.shape[0]] = p_params.data
+
+                with torch.no_grad():
+                    q_params.copy_(patch)
 
                 # Set to next layer of pretrained
                 try:
