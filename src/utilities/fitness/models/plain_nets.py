@@ -32,7 +32,7 @@ class Model(nn.Module):
             padding = l[2] if l[2] != None else kernel // 2
 
             conv[l[5]] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
-            nn.init.xavier_uniform(conv[l[5]].weight, gain=np.sqrt(2))
+            nn.init.xavier_uniform_(conv[l[5]].weight, gain=np.sqrt(2))
             conv['relu'+str(idx)] = nn.ReLU(inplace=True)
             if pool:
                 conv['pool'+str(idx)] = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -42,7 +42,7 @@ class Model(nn.Module):
         fcn = collections.OrderedDict()
         for l in range(1, len(layers)):
             linear = nn.Linear(layers[l-1], layers[l])
-            nn.init.xavier_uniform(linear.weight, gain=np.sqrt(2))
+            nn.init.xavier_uniform_(linear.weight, gain=np.sqrt(2))
             fcn["fcn"+str(l)] = linear
             if l != len(layers) - 1:
                 fcn["dp"+str(l)] = nn.Dropout(p=0.7)
@@ -52,10 +52,10 @@ class Model(nn.Module):
     def reinitialize_params(self):
         for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
             if hasattr(l, 'weight'):
-                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
+                nn.init.xavier_uniform_(l.weight, gain=np.sqrt(2))
         for l in self.fcn_layers.module if params['CUDA_ENABLED'] else self.fcn_layers:
             if hasattr(l, 'weight'):
-                nn.init.xavier_uniform(l.weight, gain=np.sqrt(2))
+                nn.init.xavier_uniform_(l.weight, gain=np.sqrt(2))
         if params['DEBUG_NET']:
             for l in self.conv_layers.module if params['CUDA_ENABLED'] else self.conv_layers:
                 if hasattr(l, 'weight'):

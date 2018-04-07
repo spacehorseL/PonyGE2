@@ -39,7 +39,7 @@ class Network():
         self.optimizer.zero_grad()
         loss_fcn.backward()
         self.optimizer.step()
-        self.train_loss.setLoss('mse', loss_fcn.data[0])
+        self.train_loss.setLoss('mse', loss_fcn.data.item())
 
 
     def test(self, x, y, print_confusion=False):
@@ -47,7 +47,7 @@ class Network():
         x, y = self.load_xy(x, y)
         if params['CUDA_ENABLED']:
             x, y = x.cuda(), y.cuda()
-        x, y = Variable(x, volatile=True), Variable(y)
+        x, y = Variable(x), Variable(y)
 
         output = self.model(x)
         loss_fcn = self.criterion(output, y)
@@ -129,7 +129,7 @@ class RegressionNet(Network):
         o_idx = o_idx.view_as(y_idx)
         diff = o_idx.sub(y_idx).abs()
 
-        loss['mse'] = loss_fcn.data[0]
+        loss['mse'] = loss_fcn.data.item()
         loss['mse_rnk'] = self.calc_msernk(diff)
         loss.setList('rankHist', diff.tolist())
         return loss['mse_rnk']
@@ -175,7 +175,7 @@ class ClassificationNet(Network):
         return sum([a in b for a,b in zip(y.data, output.data.topk(k)[1])]) / len(output.data)
 
     def calc_loss(self, output, y, loss_fcn, loss, print_confusion=False):
-        loss['nll'] = loss_fcn.data[0]
+        loss['nll'] = loss_fcn.data.item()
         loss['accuracy'] = self.calc_accuracy(output, y)
         loss['top5'] = self.calc_topk(output, y, 5)
         # if print_confusion:
@@ -217,7 +217,7 @@ class EvoPretrainedClassificationNet(ClassificationNet):
                 Logger.log('Set parameters: {}'.format(p_name))
                 # Skip initialize if 1D bias
                 if p_name.find('bias') < 0:
-                    nn.init.xavier_uniform(q_params, gain=np.sqrt(2))
+                    nn.init.xavier_uniform_(q_params, gain=np.sqrt(2))
                 # Set extra parameters to zero for debugging
                 if params['DEBUG_NET']:
                     q_params.data.fill_(0)
