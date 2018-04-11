@@ -10,13 +10,14 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 class Model(nn.Module):
-    def __init__(self, fcn_layers, conv_layers):
+    def __init__(self, fcn_layers, conv_layers, input_channel=params['INPUT_CHANNEL']):
         super(Model, self).__init__()
+        self.input_channel = input_channel
         self._fcn_layers = fcn_layers
         self._conv_layers = conv_layers
         self.conv_layers = self.set_conv(conv_layers)
         self.fcn_layers = self.set_fcn(fcn_layers)
-
+        
         if params['CUDA_ENABLED']:
             if self.conv_layers:
                 self.conv_layers = nn.DataParallel(self.conv_layers).cuda()
@@ -27,12 +28,13 @@ class Model(nn.Module):
         # (output, kernel, padding, stride, pool?, name)
         conv = collections.OrderedDict()
         for idx, l in enumerate(conv_layers):
-            input_channel = conv_layers[idx-1][0] if idx > 0 else params['INPUT_CHANNEL']
-            output_channel, kernel, stride, pool = l[0], l[1], l[3], l[4]
-            padding = l[2] if l[2] != None else kernel // 2
+            input_channel = conv_layers[idx-1][0] if idx > 0 else self.input_channel
+            output_channel, kernel, padding, stride, pool, name = l
+            if padding is None:
+                padding = kernel // 2
 
-            conv[l[5]] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
-            nn.init.xavier_uniform_(conv[l[5]].weight, gain=np.sqrt(2))
+            conv[name] = nn.Conv2d(input_channel, output_channel, kernel_size=kernel, stride=stride, padding=padding)
+            nn.init.xavier_uniform_(conv[name].weight, gain=np.sqrt(2))
             conv['relu'+str(idx)] = nn.ReLU(inplace=True)
             if pool:
                 conv['pool'+str(idx)] = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -66,6 +68,10 @@ class Model(nn.Module):
 
     def get_module(self):
         return self.model.modules()
+
+    def cpu(self):
+        self.conv_layers = self.conv_layers.cpu()
+        self.fcn_layers = self.fcn_layers.cpu()
 
 class FCNModel(Model):
     def __init__(self, fcn_layers):

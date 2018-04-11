@@ -13,7 +13,7 @@
         | layer<kernel><hidden>
         | layer
 <fixedlayer> ::= fixedlayer<inc>
-<inc> ::= inc0
+<inc> ::= inc0 | inc2 | inc3 | inc4
 <kernel> ::= grow_k | shrink_k | same_k | random_k
 <kernel_a> ::= grow_k | shrink_k | same_k | random_k
 <kernel_b> ::= shrink_k | same_k

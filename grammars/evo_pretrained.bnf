@@ -1,5 +1,5 @@
 <start> ::= <image_proc><evo_channel>
-<image_proc> ::= merge<ch1><ch2><ch3>
+<image_proc> ::= merge<ch1><ch2><ch3><op><op><op><op><op><op>
 <evo_channel> ::= <fixedlayer><fixedlayer><fixedlayer><fixedlayer><fixedlayer>
 <fixedlayer> ::= fixedlayer<inc>
 #<inc> ::= inc0

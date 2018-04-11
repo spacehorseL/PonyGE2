@@ -35,7 +35,7 @@ class Network():
 
         output = self.model(x)
         loss_fcn = self.criterion(output, y)
-
+ 
         self.optimizer.zero_grad()
         loss_fcn.backward()
         self.optimizer.step()
@@ -139,9 +139,9 @@ class RegressionNet(Network):
         return np.array(self.validation_log).mean(axis=0)[1]
 
 class ClassificationNet(Network):
-    def __init__(self, fcn_layers, conv_layers):
+    def __init__(self, fcn_layers, conv_layers, input_channel=params['INPUT_CHANNEL']):
         super(ClassificationNet, self).__init__()
-        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers)
+        self.model = eval(params['NETWORK_MODEL'])(fcn_layers=fcn_layers, conv_layers=conv_layers, input_channel=input_channel)
         self.criterion = F.cross_entropy
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])
         self.measures = ['nll', 'accuracy', 'top5']
@@ -198,10 +198,11 @@ class EvoPretrainedClassificationNet(ClassificationNet):
         super(EvoPretrainedClassificationNet, self).__init__(fcn_layers, conv_layers)
 
         pretrained_model_path = params['PRETRAINED_MODEL']
-        prenet = ClassificationNet(params['FCN_LAYERS'], params['CONV_LAYERS'])
+        prenet = ClassificationNet(params['FCN_LAYERS'], params['CONV_LAYERS'], input_channel=3)
         if not os.path.isfile(pretrained_model_path):
             Logger.log("Training Pretrained Network: ")
-            torch.save(prenet.model.state_dict(), pretrained_model_path)
+            Logger.log("Saving Pretrained Network to: {}".format(pretrained_model_path))
+            # torch.save(prenet.model.state_dict(), pretrained_model_path)
         prenet.model.load_state_dict(torch.load(pretrained_model_path))
 
         self.model = ConvModel(fcn_layers=fcn_layers, conv_layers=conv_layers)
@@ -212,6 +213,7 @@ class EvoPretrainedClassificationNet(ClassificationNet):
         prenet_m = iter(prenet.model.named_parameters())
         p_name, p_params = next(prenet_m)
 
+        print(p_params.data[41,1,:4,:4])
         for q_name, q_params in self.model.named_parameters():
             if p_name == q_name:
                 Logger.log('Set parameters: {}'.format(p_name))
@@ -220,26 +222,44 @@ class EvoPretrainedClassificationNet(ClassificationNet):
                     nn.init.xavier_uniform_(q_params, gain=np.sqrt(2))
                 # Set extra parameters to zero for debugging
                 if params['DEBUG_NET']:
+                    Logger.log('Debug network :: Fill 0')
                     q_params.data.fill_(0)
 
-                patch = q_params.clone()
                 # Transfer convolution params
                 if p_name.find('conv') >= 0 and p_name.find('weight') >= 0:
-                    patch[:p_params.data.shape[0],:p_params.data.shape[1],:,:] = p_params
+                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1],:,:] = p_params.data
+                    # template = p_params.data.view((-1, p_params.data.shape[2], p_params.data.shape[3]))
+                    # for sub in patch[:, p_params.data.shape[1]:]:
+                    #     sub = template[torch.randperm(len(template))]
+                    # for sub in patch[p_params.data.shape[0]:,:]:
+                    #     sub = template[torch.randperm(len(template))]
                 # Transfer fully connected params
-                if p_name.find('fcn') >= 0 and p_name.find('weight') >= 0:
-                    patch[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
+                elif p_name.find('fcn') >= 0 and p_name.find('weight') >= 0:
+                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
                 # Transfer bias params
-                if p_name.find('bias') >= 0:
-                    patch[:p_params.data.shape[0]] = p_params.data
+                elif p_name.find('bias') >= 0:
+                    q_params.data[:p_params.data.shape[0]] = p_params.data
 
-                with torch.no_grad():
-                    q_params.copy_(patch)
-
+                # with torch.no_grad():
+                #     q_params.copy_(patch)
                 # Set to next layer of pretrained
                 try:
                     p_name, p_params = next(prenet_m)
                 except StopIteration:
                     break
 
+        for q_name, q_params in self.model.named_parameters():
+            print("Model parameters: ", q_name)
+        for p_name, p_params in prenet.model.named_parameters():
+            print("Prenet parameters: ", p_name)
+        for q_name, q_params in self.model.named_parameters():
+            if q_name == "conv_layers.module.alex1.weight":
+                print(torch.sum(q_params.data.view((-1)).eq(0)).item())
+                print(q_params.data[41,1,:4,:4])
+                print(q_params.data[-1,1,:4,:4])
+
+        # Release pretrained model
+        prenet.model.cpu()
+        del prenet
+        torch.cuda.empty_cache()
         self.optimizer = optim.SGD(self.model.parameters(), lr=params['LEARNING_RATE'], momentum=params['MOMENTUM'])

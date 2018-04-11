@@ -20,6 +20,7 @@ class NetworkProcessor:
         for idx, i in enumerate(cleaned_instance):
             if 'fixedlayer' in i:
                 # Find digits in inc'N'
+
                 output, kernel, padding, stride, pool, name = fixed[j]
                 output += cls.process('inc_c', [re.findall(r'\d+\d*', i[1])[0]])
                 # Append fixed layer (pre-defined layers)

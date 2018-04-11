@@ -11,7 +11,7 @@ DATASET_ID:             5
 ##                                ##
 ##             GP Setup           ##
 ##                                ##
-MAXIMIZE:               False
+MAXIMIZE:               True 
 GRAMMAR_FILE:           evo_pretrained.bnf
 FITNESS_FUNCTION:       cifar10 
 INITIALISATION:         PI_grow

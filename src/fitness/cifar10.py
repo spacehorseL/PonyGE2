@@ -99,7 +99,7 @@ class cifar10(base_ff):
             Logger.log("\tIndividual: {}".format(flat_ind))
         else:
             new_conv_layers = copy.deepcopy(self.conv_layers)
-
+        
         conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
         Logger.log("\tNew convolution layers: ")
         for i, a, b in zip(range(len(new_conv_layers)), new_conv_layers, conv_outputs):
