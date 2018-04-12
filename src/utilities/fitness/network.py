@@ -213,7 +213,6 @@ class EvoPretrainedClassificationNet(ClassificationNet):
         prenet_m = iter(prenet.model.named_parameters())
         p_name, p_params = next(prenet_m)
 
-        print(p_params.data[41,1,:4,:4])
         for q_name, q_params in self.model.named_parameters():
             if p_name == q_name:
                 Logger.log('Set parameters: {}'.format(p_name))
@@ -227,7 +226,7 @@ class EvoPretrainedClassificationNet(ClassificationNet):
 
                 # Transfer convolution params
                 if p_name.find('conv') >= 0 and p_name.find('weight') >= 0:
-                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1],:,:] = p_params.data
+                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1],:,:] = p_params.data.clone()
                     # template = p_params.data.view((-1, p_params.data.shape[2], p_params.data.shape[3]))
                     # for sub in patch[:, p_params.data.shape[1]:]:
                     #     sub = template[torch.randperm(len(template))]
@@ -235,10 +234,10 @@ class EvoPretrainedClassificationNet(ClassificationNet):
                     #     sub = template[torch.randperm(len(template))]
                 # Transfer fully connected params
                 elif p_name.find('fcn') >= 0 and p_name.find('weight') >= 0:
-                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data
+                    q_params.data[:p_params.data.shape[0],:p_params.data.shape[1]] = p_params.data.clone()
                 # Transfer bias params
                 elif p_name.find('bias') >= 0:
-                    q_params.data[:p_params.data.shape[0]] = p_params.data
+                    q_params.data[:p_params.data.shape[0]] = p_params.data.clone()
 
                 # with torch.no_grad():
                 #     q_params.copy_(patch)
@@ -247,16 +246,13 @@ class EvoPretrainedClassificationNet(ClassificationNet):
                     p_name, p_params = next(prenet_m)
                 except StopIteration:
                     break
+            else:
+                print("WARNING: Module {0} is not initialized.".format(q_name))
 
         for q_name, q_params in self.model.named_parameters():
             print("Model parameters: ", q_name)
         for p_name, p_params in prenet.model.named_parameters():
             print("Prenet parameters: ", p_name)
-        for q_name, q_params in self.model.named_parameters():
-            if q_name == "conv_layers.module.alex1.weight":
-                print(torch.sum(q_params.data.view((-1)).eq(0)).item())
-                print(q_params.data[41,1,:4,:4])
-                print(q_params.data[-1,1,:4,:4])
 
         # Release pretrained model
         prenet.model.cpu()
