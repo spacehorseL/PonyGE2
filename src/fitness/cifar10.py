@@ -99,7 +99,7 @@ class cifar10(base_ff):
             Logger.log("\tIndividual: {}".format(flat_ind))
         else:
             new_conv_layers = copy.deepcopy(self.conv_layers)
-        
+
         conv_outputs = Network.calc_conv_output(new_conv_layers, image.shape)
         Logger.log("\tNew convolution layers: ")
         for i, a, b in zip(range(len(new_conv_layers)), new_conv_layers, conv_outputs):
@@ -114,6 +114,10 @@ class cifar10(base_ff):
             Logger.log("Using pretrained model at {}".format(params['PRETRAINED_MODEL']))
             net.test(X_test, y_test)
             Logger.log("Pretrained initial scores: {}".format(net.get_test_loss_str()))
+
+        def visualize(tag):
+            if params['VISUALIZE']:
+                net.visualize_conv([('alex1', 'alex1')], '.'+tag)
 
         kf = KFold(n_splits=params['CROSS_VALIDATION_SPLIT'])
         fitness, fold = 0, 1
@@ -147,6 +151,9 @@ class cifar10(base_ff):
                     net.test(X_test, y_test)
                     Logger.log("Epoch {} Test loss (NLL/Accuracy): {}".format(epoch, net.get_test_loss_str()))
 
+                if epoch % params['VALIDATION_FREQ'] == 0 or epoch < 15:
+                    visualize('g{}_e{}_f{}_ep{}'.format(params['CURRENT_GENERATION'], params['CURRENT_EVALUATION'], fold, epoch))
+
                 # check for early stop
                 if epoch == early_ckpt:
                     accuracy = net.test(X_test, y_test, print_confusion=True)
@@ -159,7 +166,7 @@ class cifar10(base_ff):
                             break
                     # early_ckpt = min(early_ckpt+300, early_ckpt*2)
                     early_ckpt += params['VALIDATION_FREQ']
-		
+
             # Validate model
             net.test(X_val, y_val)
             net.save_validation_loss()
@@ -173,7 +180,9 @@ class cifar10(base_ff):
             # Calculate time
             s_time[fold-1] = time.time() - s_time[fold-1]
             Logger.log("Cross Validation [Fold {}/{}] Training Time (m / m per epoch): {:.3f} {:.3f}".format(fold, kf.get_n_splits(), s_time[fold-1]/60, s_time[fold-1]/60/epoch))
-            
+
+            visualize('g{}_e{}_f{}_ep{}.end'.format(params['CURRENT_GENERATION'], params['CURRENT_EVALUATION'], fold, epoch))
+
             fold = fold + 1
 
         fitness = net.get_fitness()

@@ -54,11 +54,23 @@ class Network():
 
         return self.calc_loss(output, y, loss_fcn, self.test_loss, print_confusion=print_confusion)
 
-    def visualize(self, layers, image_size, canvas_size):
+    def visualize_fcn(self, layers, image_size, canvas_size):
         Logger.log("Visualizing layers: " + ", ".join([n[0] for n in layers]))
         model = [m for m in self.model.modules()][1] if params['CUDA_ENABLED'] else self.model
         for name, fname in layers:
-            Visualizer.from_torch(model.__getattr__(name)).visualize_fcn(fname+'.png', image_size, canvas_size)
+            data = Visualizer.from_torch(model.__getattr__(name).weight.data)
+            Visualizer.visualize_fcn(data, fname+'.png', image_size, canvas_size)
+
+    def visualize_conv(self, layers, fname_prepend):
+        Logger.log("Visualizing conv layers: " + ", ".join(n[0] for n in layers))
+        model = [m for m in self.model.modules()][1] if params['CUDA_ENABLED'] else self.model
+        for name, fname in layers:
+            for p_name, p_params in model.named_parameters():
+                if p_name.find('.' + name + '.') >= 0 and p_name.find('weight') >= 0 :
+                    ffname = params['VISUALIZE_PATH'] + fname + fname_prepend + '.png'
+                    Logger.log("\tWriting image {} to {}....".format(p_name, ffname))
+                    data = Visualizer.from_torch(p_params.data.clone())
+                    Visualizer.visualize_conv(data, ffname)
 
     @classmethod
     def calc_conv_output(cls, conv_layers, img_shape):

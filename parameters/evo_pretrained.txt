@@ -44,7 +44,7 @@ BATCH_SIZE:             300
 LEARNING_RATE:          0.1
 MOMENTUM:               0.2
 FCN_LAYERS:             [256, 10]
-# CONV_LAYERS:            [(64,3,None, 4, True), (32,3, None, 1, True)]
+# CONV_LAYERS:            [(64, 3, None, 4, True, 'alex1'), (32, 3, None, 1, True, 'alex2')]
 CONV_LAYERS:            [(64, 11, None, 4, True, 'alex1'), (192, 5, None, 1, True, 'alex2'), (384, 3, None, 1, False, 'alex3'), (256, 3, None, 1, False, 'alex4'), (256, 3, None, 1, True, 'alex5')]
 PRETRAIN:               True
 PRETRAINED_MODEL:       pretrained/alex60.pkl
